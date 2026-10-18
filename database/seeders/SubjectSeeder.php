@@ -94,6 +94,49 @@ class SubjectSeeder extends Seeder
                     'System Design: Scalability, Load Balancing & Replication',
                 ],
             ],
+            [
+                'name' => 'Digital Logic Design & Computer Architecture',
+                'icon' => 'CpuChipIcon',
+                'description' => 'Boolean Algebra, Logic Gates, Combinational & Sequential Circuits, Karnaugh Maps, Memory & ALU, and CPU Architecture.',
+                'topics' => [
+                    'Number Systems, Floating Point & Binary Arithmetic',
+                    'Boolean Algebra & Logic Gates (AND, OR, NOT, NAND, NOR, XOR)',
+                    'Karnaugh Maps (K-Maps) & Boolean Minimization',
+                    'Combinational Circuits (Multiplexer, Decoder, Adder)',
+                    'Sequential Circuits (Flip-Flops, Latches, Registers)',
+                    'Counters & State Machines',
+                    'Memory Hierarchy (Cache, SRAM, DRAM) & Addressing Modes',
+                    'Pipelining, Instruction Cycles & RISC vs CISC',
+                ],
+            ],
+            [
+                'name' => 'Artificial Intelligence & Machine Learning',
+                'icon' => 'SparklesIcon',
+                'description' => 'Search Algorithms, Heuristics, Machine Learning basics, Neural Networks, NLP, and Expert Systems.',
+                'topics' => [
+                    'Informed & Uninformed Search (BFS, DFS, A* Search)',
+                    'Adversarial Search, Minimax & Alpha-Beta Pruning',
+                    'Supervised Learning (Regression, Classification, SVM, Decision Trees)',
+                    'Unsupervised Learning (K-Means Clustering, PCA)',
+                    'Neural Networks & Deep Learning Fundamentals',
+                    'Natural Language Processing (NLP) & Tokenization',
+                    'Prompt Engineering & LLM Architecture',
+                    'Evaluation Metrics (Accuracy, Precision, Recall, F1-Score)',
+                ],
+            ],
+            [
+                'name' => 'Compiler Design & Automata Theory',
+                'icon' => 'CodeBracketIcon',
+                'description' => 'Finite Automata, Regular Expressions, Context-Free Grammars, Lexical & Syntax Analysis, Parsing, and Code Optimization.',
+                'topics' => [
+                    'DFA, NFA & Regular Expressions',
+                    'Context-Free Grammars (CFG) & Chomsky Hierarchy',
+                    'Lexical Analysis & Token Generation',
+                    'Parsing Techniques (LL(1), LR(0), SLR, LALR)',
+                    'Syntax Directed Translation (SDT)',
+                    'Intermediate Code Generation & Optimization',
+                ],
+            ],
         ];
 
         foreach ($subjectsWithTopics as $subjectData) {

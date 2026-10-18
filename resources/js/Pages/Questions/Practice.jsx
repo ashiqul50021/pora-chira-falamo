@@ -102,13 +102,19 @@ export default function Practice({ questions, subjects, selectedSubject, selecte
         }
     };
 
-    const handleFilterChange = (subId, type = selectedType) => {
+    const handleFilterChange = (subId, type = selectedType, topId = '') => {
         router.get(
             route('questions.practice'),
-            { subject_id: subId, type: type || undefined },
+            {
+                subject_id: subId || undefined,
+                type: type || undefined,
+                topic_id: topId || undefined,
+            },
             { preserveState: false }
         );
     };
+
+    const selectedSubjectObj = subjects.find((s) => String(s.id) === String(selectedSubject));
 
     return (
         <AuthenticatedLayout
@@ -137,7 +143,7 @@ export default function Practice({ questions, subjects, selectedSubject, selecte
         >
             <Head title="কুইক প্র্যাকটিস - IT Exam Prep" />
 
-            {/* Filters: Format and Subject */}
+            {/* Filters: Format, Subject, and Specific Topic */}
             <div className="mb-6 space-y-3">
                 {/* Format Filter */}
                 <div className="flex items-center gap-2">
@@ -149,7 +155,7 @@ export default function Practice({ questions, subjects, selectedSubject, selecte
                     ].map((f) => (
                         <button
                             key={f.key}
-                            onClick={() => handleFilterChange(selectedSubject, f.key)}
+                            onClick={() => handleFilterChange(selectedSubject, f.key, selectedTopic)}
                             className={`px-3 py-1 rounded-lg text-xs font-semibold transition border ${
                                 (selectedType || '') === f.key
                                     ? 'bg-cyan-600 border-cyan-500 text-white'
@@ -164,7 +170,7 @@ export default function Practice({ questions, subjects, selectedSubject, selecte
                 {/* Subject Filters */}
                 <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
                     <button
-                        onClick={() => handleFilterChange('', selectedType)}
+                        onClick={() => handleFilterChange('', selectedType, '')}
                         className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition border ${
                             !selectedSubject
                                 ? 'bg-indigo-600 border-indigo-500 text-white'
@@ -176,7 +182,7 @@ export default function Practice({ questions, subjects, selectedSubject, selecte
                     {subjects.map((sub) => (
                         <button
                             key={sub.id}
-                            onClick={() => handleFilterChange(sub.id, selectedType)}
+                            onClick={() => handleFilterChange(sub.id, selectedType, '')}
                             className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition border ${
                                 String(selectedSubject) === String(sub.id)
                                     ? 'bg-indigo-600 border-indigo-500 text-white'
@@ -187,6 +193,36 @@ export default function Practice({ questions, subjects, selectedSubject, selecte
                         </button>
                     ))}
                 </div>
+
+                {/* Specific Subtopic Selector (appears when a subject is chosen) */}
+                {selectedSubjectObj && selectedSubjectObj.topics && selectedSubjectObj.topics.length > 0 && (
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none pt-1">
+                        <span className="text-[11px] text-slate-400 font-medium shrink-0 mr-1">টপিক:</span>
+                        <button
+                            onClick={() => handleFilterChange(selectedSubject, selectedType, '')}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap transition border ${
+                                !selectedTopic
+                                    ? 'bg-cyan-600 border-cyan-500 text-white'
+                                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                            }`}
+                        >
+                            সকল টপিক
+                        </button>
+                        {selectedSubjectObj.topics.map((top) => (
+                            <button
+                                key={top.id}
+                                onClick={() => handleFilterChange(selectedSubject, selectedType, top.id)}
+                                className={`px-2.5 py-1 rounded-lg text-[11px] font-medium whitespace-nowrap transition border ${
+                                    String(selectedTopic) === String(top.id)
+                                        ? 'bg-cyan-600 border-cyan-500 text-white'
+                                        : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-white'
+                                }`}
+                            >
+                                {top.name}
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {questions.length === 0 ? (
