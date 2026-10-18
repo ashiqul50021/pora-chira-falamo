@@ -1,283 +1,353 @@
-import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
-import NavLink from '@/Components/NavLink';
-import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
 import { Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import { 
-    Flame, 
-    AlertTriangle, 
-    Sparkles, 
-    BookOpen, 
-    FileText, 
-    BarChart3, 
+import {
     LayoutDashboard,
     PlayCircle,
+    FileText,
     UploadCloud,
+    BookOpen,
+    BarChart3,
+    Flame,
+    AlertTriangle,
     CheckCircle2,
-    X
+    X,
+    User as UserIcon,
+    LogOut,
+    Menu,
+    ChevronRight,
+    Sparkles,
+    ShieldAlert,
+    Target
 } from 'lucide-react';
 
 export default function AuthenticatedLayout({ header, children }) {
     const { auth, flash } = usePage().props;
     const user = auth.user;
 
-    const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
+    const [mobileOpen, setMobileOpen] = useState(false);
     const [dismissAlert, setDismissAlert] = useState(false);
 
+    const navItems = [
+        {
+            group: 'মূল মেনু',
+            items: [
+                {
+                    name: 'ড্যাশবোর্ড',
+                    href: route('dashboard'),
+                    active: route().current('dashboard'),
+                    icon: LayoutDashboard,
+                },
+                {
+                    name: 'কুইক প্র্যাকটিস',
+                    href: route('questions.practice'),
+                    active: route().current('questions.practice'),
+                    icon: PlayCircle,
+                    badge: 'লাইভ',
+                },
+                {
+                    name: 'মক টেস্ট ও পরীক্ষা',
+                    href: route('quizzes.index'),
+                    active: route().current('quizzes.*'),
+                    icon: FileText,
+                },
+            ],
+        },
+        {
+            group: 'প্রশ্ন ও এআই টুলস',
+            items: [
+                {
+                    name: 'AI কোশ্চেন স্টুডিও',
+                    href: route('questions.upload'),
+                    active: route().current('questions.upload'),
+                    icon: UploadCloud,
+                    badge: 'Gemini',
+                    badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+                },
+                {
+                    name: 'আইটি প্রশ্নব্যাংক',
+                    href: route('questions.index'),
+                    active: route().current('questions.index'),
+                    icon: BookOpen,
+                },
+            ],
+        },
+        {
+            group: 'অ্যানালাইটিক্স',
+            items: [
+                {
+                    name: 'উইকলি রিপোর্ট',
+                    href: route('analytics.index'),
+                    active: route().current('analytics.index'),
+                    icon: BarChart3,
+                },
+            ],
+        },
+    ];
+
     return (
-        <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans antialiased selection:bg-indigo-500 selection:text-white">
-            {/* Top Navigation Bar */}
-            <nav className="sticky top-0 z-50 backdrop-blur-md bg-slate-900/80 border-b border-slate-800">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between h-16 items-center">
-                        {/* Brand & Main Links */}
-                        <div className="flex items-center space-x-6 lg:space-x-8">
-                            <Link href="/dashboard" className="flex items-center space-x-2.5 group">
-                                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-violet-600 to-cyan-400 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition duration-200">
-                                    <Sparkles className="w-5 h-5 text-white" />
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-base font-bold tracking-tight bg-gradient-to-r from-white via-slate-100 to-indigo-300 bg-clip-text text-transparent">
-                                        PoraChira IT
+        <div className="min-h-screen bg-[#0b0f17] text-slate-100 flex antialiased">
+            {/* Mobile Drawer Overlay */}
+            {mobileOpen && (
+                <div
+                    onClick={() => setMobileOpen(false)}
+                    className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm lg:hidden transition-opacity"
+                />
+            )}
+
+            {/* Left Sidebar */}
+            <aside
+                className={`fixed top-0 bottom-0 left-0 z-50 w-64 bg-[#0f172a] border-r border-slate-800 flex flex-col justify-between transition-transform duration-200 ease-in-out lg:translate-x-0 ${
+                    mobileOpen ? 'translate-x-0' : '-translate-x-full'
+                }`}
+            >
+                <div>
+                    {/* Brand Header */}
+                    <div className="h-16 px-5 border-b border-slate-800 flex items-center justify-between">
+                        <Link href={route('dashboard')} className="flex items-center gap-3 group">
+                            <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-base shadow-sm group-hover:bg-indigo-500 transition">
+                                <Sparkles className="w-5 h-5" />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="font-bold text-sm tracking-tight text-white flex items-center gap-1.5">
+                                    <span>PoraChira IT</span>
+                                    <span className="text-[10px] font-semibold uppercase px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                                        PRO
                                     </span>
-                                    <span className="text-[10px] font-medium uppercase tracking-wider text-indigo-400">
-                                        AI Exam Prep
-                                    </span>
+                                </span>
+                                <span className="text-[11px] text-slate-400">পরীক্ষার প্রস্তুতি প্ল্যাটফর্ম</span>
+                            </div>
+                        </Link>
+
+                        <button
+                            onClick={() => setMobileOpen(false)}
+                            className="p-1 rounded-lg text-slate-400 hover:text-white lg:hidden"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+
+                    {/* User Streak & Profile Card */}
+                    <div className="p-3.5 m-3 rounded-xl bg-slate-900/90 border border-slate-800">
+                        <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-cyan-500 text-white flex items-center justify-center font-bold text-xs uppercase">
+                                    {user?.name?.charAt(0) || 'U'}
                                 </div>
-                            </Link>
-
-                            <div className="hidden md:flex space-x-1 lg:space-x-2">
-                                <Link
-                                    href={route('dashboard')}
-                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-1.5 ${
-                                        route().current('dashboard')
-                                            ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
-                                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                                    }`}
-                                >
-                                    <LayoutDashboard className="w-4 h-4" />
-                                    ড্যাশবোর্ড
-                                </Link>
-
-                                <Link
-                                    href={route('questions.practice')}
-                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-1.5 ${
-                                        route().current('questions.practice')
-                                            ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
-                                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                                    }`}
-                                >
-                                    <PlayCircle className="w-4 h-4 text-emerald-400" />
-                                    প্র্যাকটিস
-                                </Link>
-
-                                <Link
-                                    href={route('quizzes.index')}
-                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-1.5 ${
-                                        route().current('quizzes.*')
-                                            ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
-                                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                                    }`}
-                                >
-                                    <FileText className="w-4 h-4 text-cyan-400" />
-                                    মক টেস্ট
-                                </Link>
-
-                                <Link
-                                    href={route('questions.upload')}
-                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-1.5 ${
-                                        route().current('questions.upload')
-                                            ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
-                                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                                    }`}
-                                >
-                                    <UploadCloud className="w-4 h-4 text-purple-400" />
-                                    AI স্টুডিও
-                                </Link>
-
-                                <Link
-                                    href={route('questions.index')}
-                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-1.5 ${
-                                        route().current('questions.index')
-                                            ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
-                                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                                    }`}
-                                >
-                                    <BookOpen className="w-4 h-4 text-amber-400" />
-                                    প্রশ্নব্যাংক
-                                </Link>
-
-                                <Link
-                                    href={route('analytics.index')}
-                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-1.5 ${
-                                        route().current('analytics.index')
-                                            ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
-                                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                                    }`}
-                                >
-                                    <BarChart3 className="w-4 h-4 text-rose-400" />
-                                    উইকলি রিপোর্ট
-                                </Link>
-                            </div>
-                        </div>
-
-                        {/* Right Area: Streak, Penalty, User profile */}
-                        <div className="hidden sm:flex sm:items-center sm:space-x-3">
-                            {/* Streak Counter Badge */}
-                            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold shadow-sm">
-                                <Flame className="w-4 h-4 fill-amber-500 text-amber-500 animate-pulse" />
-                                <span>{user?.streak || 0} দিন স্ট্রিক</span>
-                            </div>
-
-                            {/* Penalty Badge (if any) */}
-                            {user?.penalties > 0 && (
-                                <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-medium" title={`${user.penalties} দিন মিস হয়েছিল!`}>
-                                    <AlertTriangle className="w-3.5 h-3.5" />
-                                    <span>-{user.penalties} মিসড</span>
+                                <div className="overflow-hidden">
+                                    <div className="text-xs font-bold text-white truncate max-w-[110px]">
+                                        {user?.name}
+                                    </div>
+                                    <div className="text-[10px] text-slate-400 truncate max-w-[110px]">
+                                        {user?.email}
+                                    </div>
                                 </div>
-                            )}
-
-                            {/* User Dropdown */}
-                            <div className="relative">
-                                <Dropdown>
-                                    <Dropdown.Trigger>
-                                        <button
-                                            type="button"
-                                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700/80 border border-slate-700 text-slate-200 text-sm font-medium transition focus:outline-none"
-                                        >
-                                            <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold uppercase">
-                                                {user?.name?.charAt(0) || 'U'}
-                                            </div>
-                                            <span>{user?.name}</span>
-                                            <svg className="w-3.5 h-3.5 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                                            </svg>
-                                        </button>
-                                    </Dropdown.Trigger>
-
-                                    <Dropdown.Content contentClasses="bg-slate-800 border border-slate-700 shadow-xl rounded-xl py-1 text-slate-200">
-                                        <Dropdown.Link href={route('profile.edit')} className="text-slate-300 hover:text-white hover:bg-slate-700/50">
-                                            প্রোফাইল
-                                        </Dropdown.Link>
-                                        <Dropdown.Link href={route('logout')} method="post" as="button" className="text-rose-400 hover:text-rose-300 hover:bg-slate-700/50">
-                                            লগআউট
-                                        </Dropdown.Link>
-                                    </Dropdown.Content>
-                                </Dropdown>
                             </div>
-                        </div>
 
-                        {/* Mobile menu toggle button */}
-                        <div className="flex items-center sm:hidden">
-                            <button
-                                onClick={() => setShowingNavigationDropdown(!showingNavigationDropdown)}
-                                className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 focus:outline-none"
+                            {/* Flame Streak Count */}
+                            <div
+                                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold"
+                                title="বর্তমান একটানা পড়ার স্ট্রিক"
                             >
-                                <svg className="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
-                                    <path
-                                        className={!showingNavigationDropdown ? 'inline-flex' : 'hidden'}
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth="2"
-                                        d="M4 6h16M4 12h16M4 18h16"
-                                    />
-                                    <path
-                                        className={showingNavigationDropdown ? 'inline-flex' : 'hidden'}
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth="2"
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
-                                </svg>
+                                <Flame className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                                <span>{user?.streak || 0}d</span>
+                            </div>
+                        </div>
+
+                        {/* Penalty indicator if missed days */}
+                        {user?.penalties > 0 && (
+                            <div className="text-[10px] text-rose-400 bg-rose-500/10 py-1 px-2 rounded-md border border-rose-500/20 flex items-center gap-1 font-medium mt-1">
+                                <AlertTriangle className="w-3 h-3 shrink-0" />
+                                <span>{user.penalties} দিন প্র্যাকটিস মিসড</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Navigation Menu Links */}
+                    <div className="px-3 py-2 space-y-5 overflow-y-auto max-h-[calc(100vh-250px)]">
+                        {navItems.map((section, sIdx) => (
+                            <div key={sIdx}>
+                                <div className="px-3 mb-1.5 text-[10px] font-semibold tracking-wider text-slate-500 uppercase">
+                                    {section.group}
+                                </div>
+                                <div className="space-y-0.5">
+                                    {section.items.map((item, iIdx) => {
+                                        const Icon = item.icon;
+                                        const isActive = item.active;
+
+                                        return (
+                                            <Link
+                                                key={iIdx}
+                                                href={item.href}
+                                                className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition ${
+                                                    isActive
+                                                        ? 'bg-indigo-600 text-white shadow-sm font-semibold'
+                                                        : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-2.5">
+                                                    <Icon
+                                                        className={`w-4 h-4 ${
+                                                            isActive ? 'text-white' : 'text-slate-400'
+                                                        }`}
+                                                    />
+                                                    <span>{item.name}</span>
+                                                </div>
+
+                                                {item.badge && (
+                                                    <span
+                                                        className={`text-[9px] font-bold px-1.5 py-0.2 rounded border uppercase ${
+                                                            isActive
+                                                                ? 'bg-white/20 text-white border-white/30'
+                                                                : item.badgeColor || 'bg-slate-800 text-slate-300 border-slate-700'
+                                                        }`}
+                                                    >
+                                                        {item.badge}
+                                                    </span>
+                                                )}
+                                            </Link>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Sidebar Footer */}
+                <div className="p-3 border-t border-slate-800 flex items-center justify-between gap-1">
+                    <Link
+                        href={route('profile.edit')}
+                        className="flex-1 flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-slate-400 hover:text-white hover:bg-slate-800/60 transition"
+                    >
+                        <UserIcon className="w-4 h-4" />
+                        <span>প্রোফাইল</span>
+                    </Link>
+
+                    <Link
+                        href={route('logout')}
+                        method="post"
+                        as="button"
+                        className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition"
+                        title="লগআউট"
+                    >
+                        <LogOut className="w-4 h-4" />
+                    </Link>
+                </div>
+            </aside>
+
+            {/* Main Content Area (offset by sidebar width 256px on lg) */}
+            <div className="flex-1 flex flex-col min-w-0 lg:pl-64">
+                {/* Top Bar */}
+                <header className="sticky top-0 z-30 h-16 bg-[#0f172a]/90 backdrop-blur-md border-b border-slate-800 flex items-center justify-between px-4 sm:px-6 lg:px-8">
+                    <div className="flex items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={() => setMobileOpen(true)}
+                            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 lg:hidden focus:outline-none"
+                        >
+                            <Menu className="w-5 h-5" />
+                        </button>
+
+                        <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400">
+                            <span>হোম</span>
+                            <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
+                            <span className="text-slate-200 font-medium capitalize">
+                                {route().current()?.replace('.', ' / ') || 'ড্যাশবোর্ড'}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        {/* Live Practice Quick Button */}
+                        <Link
+                            href={route('questions.practice')}
+                            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-sm transition"
+                        >
+                            <PlayCircle className="w-3.5 h-3.5" />
+                            <span>অনুশীলন করুন</span>
+                        </Link>
+
+                        {/* Top Profile Dropdown */}
+                        <div className="relative">
+                            <Dropdown>
+                                <Dropdown.Trigger>
+                                    <button
+                                        type="button"
+                                        className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-slate-800 text-slate-300 text-xs font-medium transition"
+                                    >
+                                        <div className="w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs uppercase">
+                                            {user?.name?.charAt(0) || 'U'}
+                                        </div>
+                                        <span className="hidden md:inline font-semibold text-slate-200">{user?.name}</span>
+                                    </button>
+                                </Dropdown.Trigger>
+
+                                <Dropdown.Content contentClasses="bg-slate-800 border border-slate-700 shadow-xl rounded-xl py-1 text-slate-200 w-48">
+                                    <Dropdown.Link href={route('profile.edit')} className="text-slate-300 hover:text-white hover:bg-slate-700/50">
+                                        প্রোফাইল সেটিংস
+                                    </Dropdown.Link>
+                                    <Dropdown.Link href={route('logout')} method="post" as="button" className="text-rose-400 hover:text-rose-300 hover:bg-slate-700/50">
+                                        লগআউট
+                                    </Dropdown.Link>
+                                </Dropdown.Content>
+                            </Dropdown>
+                        </div>
+                    </div>
+                </header>
+
+                {/* Flash Messages */}
+                {flash?.success && !dismissAlert && (
+                    <div className="px-4 sm:px-6 lg:px-8 mt-4">
+                        <div className="flex items-center justify-between p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs sm:text-sm shadow-md">
+                            <div className="flex items-center gap-2">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                                <span>{flash.success}</span>
+                            </div>
+                            <button onClick={() => setDismissAlert(true)} className="text-emerald-400 hover:text-emerald-200">
+                                <X className="w-4 h-4" />
                             </button>
                         </div>
                     </div>
-                </div>
+                )}
 
-                {/* Mobile Responsive Navigation Dropdown */}
-                {showingNavigationDropdown && (
-                    <div className="sm:hidden border-b border-slate-800 bg-slate-900/95 px-4 pt-2 pb-4 space-y-1">
-                        <Link href={route('dashboard')} className="block px-3 py-2 rounded-md text-base font-medium text-slate-200 hover:bg-slate-800">
-                            ড্যাশবোর্ড
-                        </Link>
-                        <Link href={route('questions.practice')} className="block px-3 py-2 rounded-md text-base font-medium text-slate-200 hover:bg-slate-800">
-                            প্র্যাকটিস
-                        </Link>
-                        <Link href={route('quizzes.index')} className="block px-3 py-2 rounded-md text-base font-medium text-slate-200 hover:bg-slate-800">
-                            মক টেস্ট
-                        </Link>
-                        <Link href={route('questions.upload')} className="block px-3 py-2 rounded-md text-base font-medium text-slate-200 hover:bg-slate-800">
-                            AI স্টুডিও
-                        </Link>
-                        <Link href={route('questions.index')} className="block px-3 py-2 rounded-md text-base font-medium text-slate-200 hover:bg-slate-800">
-                            প্রশ্নব্যাংক
-                        </Link>
-                        <Link href={route('analytics.index')} className="block px-3 py-2 rounded-md text-base font-medium text-slate-200 hover:bg-slate-800">
-                            উইকলি রিপোর্ট
-                        </Link>
-                        <div className="pt-3 border-t border-slate-800">
-                            <div className="text-xs text-amber-400 font-medium mb-1">
-                                🔥 {user?.streak || 0} দিন স্ট্রিক
+                {flash?.error && !dismissAlert && (
+                    <div className="px-4 sm:px-6 lg:px-8 mt-4">
+                        <div className="flex items-center justify-between p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs sm:text-sm shadow-md">
+                            <div className="flex items-center gap-2">
+                                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                                <span>{flash.error}</span>
                             </div>
-                            <Link href={route('profile.edit')} className="block px-3 py-1.5 text-sm text-slate-300">
-                                প্রোফাইল
-                            </Link>
-                            <Link href={route('logout')} method="post" as="button" className="block w-full text-left px-3 py-1.5 text-sm text-rose-400">
-                                লগআউট
-                            </Link>
+                            <button onClick={() => setDismissAlert(true)} className="text-rose-400 hover:text-rose-200">
+                                <X className="w-4 h-4" />
+                            </button>
                         </div>
                     </div>
                 )}
-            </nav>
 
-            {/* Flash Alerts */}
-            {flash?.success && !dismissAlert && (
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
-                    <div className="flex items-center justify-between p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-sm shadow-md">
-                        <div className="flex items-center gap-2">
-                            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-                            <span>{flash.success}</span>
-                        </div>
-                        <button onClick={() => setDismissAlert(true)} className="text-emerald-400 hover:text-emerald-200">
-                            <X className="w-4 h-4" />
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {flash?.error && !dismissAlert && (
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
-                    <div className="flex items-center justify-between p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm shadow-md">
-                        <div className="flex items-center gap-2">
-                            <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />
-                            <span>{flash.error}</span>
-                        </div>
-                        <button onClick={() => setDismissAlert(true)} className="text-rose-400 hover:text-rose-200">
-                            <X className="w-4 h-4" />
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* Main Page Header */}
-            {header && (
-                <header className="bg-slate-900/50 border-b border-slate-800/80">
-                    <div className="max-w-7xl mx-auto py-5 px-4 sm:px-6 lg:px-8">
+                {/* Page Header (if passed) */}
+                {header && (
+                    <div className="px-4 sm:px-6 lg:px-8 py-5 border-b border-slate-800/60 bg-[#0d131f]/60">
                         {header}
                     </div>
-                </header>
-            )}
+                )}
 
-            {/* Page Content */}
-            <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                {children}
-            </main>
+                {/* Page Content Body */}
+                <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 w-full">
+                    {children}
+                </main>
 
-            {/* Footer */}
-            <footer className="border-t border-slate-800 py-6 text-center text-xs text-slate-500">
-                <p>PoraChira IT Exam Preparation Platform • Powered by Laravel, Inertia React & Gemini 3.8 Flash</p>
-            </footer>
+                {/* Footer */}
+                <footer className="border-t border-slate-800/80 py-4 px-4 sm:px-6 lg:px-8 text-xs text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-2">
+                    <p>© 2026 PoraChira IT Preparation • Built for Engineering & Competitive Exam Candidates</p>
+                    <div className="flex items-center gap-3">
+                        <span className="flex items-center gap-1 text-emerald-400">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                            Gemini 3.8 Flash Online
+                        </span>
+                    </div>
+                </footer>
+            </div>
         </div>
     );
 }
