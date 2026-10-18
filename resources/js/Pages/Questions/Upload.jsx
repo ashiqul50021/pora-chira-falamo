@@ -41,17 +41,79 @@ export default function Upload({ subjects }) {
     const [generateDifficulty, setGenerateDifficulty] = useState('medium');
     const [generateType, setGenerateType] = useState('mcq');
 
-    const addFiles = (files) => {
+    // Automatically compress high-res mobile camera photos before upload
+    const compressImage = (file) => {
+        return new Promise((resolve) => {
+            // If already below 1.5MB, use directly
+            if (file.size <= 1.5 * 1024 * 1024) {
+                resolve(file);
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    const maxDim = 2048; // Optimal clarity for Gemini OCR
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > maxDim || height > maxDim) {
+                        if (width > height) {
+                            height = Math.round((height * maxDim) / width);
+                            width = maxDim;
+                        } else {
+                            width = Math.round((width * maxDim) / height);
+                            height = maxDim;
+                        }
+                    }
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    canvas.toBlob(
+                        (blob) => {
+                            if (!blob) {
+                                resolve(file);
+                                return;
+                            }
+                            const cleanName = file.name.replace(/\.[^/.]+$/, '') + '.jpg';
+                            const compressed = new File([blob], cleanName, {
+                                type: 'image/jpeg',
+                                lastModified: Date.now(),
+                            });
+                            resolve(compressed);
+                        },
+                        'image/jpeg',
+                        0.88
+                    );
+                };
+                img.onerror = () => resolve(file);
+            };
+            reader.onerror = () => resolve(file);
+        });
+    };
+
+    const addFiles = async (files) => {
         if (!files || files.length === 0) return;
-        const newItems = Array.from(files)
-            .filter((f) => f.type.startsWith('image/'))
-            .map((file) => ({
+        const rawFiles = Array.from(files).filter((f) => f.type.startsWith('image/'));
+
+        const newItems = [];
+        for (const raw of rawFiles) {
+            const fileToUse = await compressImage(raw);
+            newItems.push({
                 id: Math.random().toString(36).substring(2, 9),
-                file,
-                preview: URL.createObjectURL(file),
-                name: file.name,
-                size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
-            }));
+                file: fileToUse,
+                preview: URL.createObjectURL(fileToUse),
+                name: fileToUse.name,
+                size: (fileToUse.size / (1024 * 1024)).toFixed(2) + ' MB',
+            });
+        }
 
         setSelectedImages((prev) => [...prev, ...newItems]);
         setError(null);

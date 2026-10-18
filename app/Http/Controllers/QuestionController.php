@@ -120,8 +120,8 @@ class QuestionController extends Controller
     {
         $validated = $request->validate([
             'images' => 'nullable|array|min:1|max:10',
-            'images.*' => 'image|max:10240',
-            'image' => 'nullable|image|max:10240',
+            'images.*' => 'image|max:30720',
+            'image' => 'nullable|image|max:30720',
             'exam_name' => 'nullable|string|max:150',
             'year' => 'nullable|string|max:10',
         ]);
