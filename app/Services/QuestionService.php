@@ -20,9 +20,15 @@ class QuestionService
      */
     protected function getExtractionPrompt(): string
     {
-        $subjectsList = Subject::with('topics')->get()->map(function ($subject) {
-            return $subject->name.' (Topics: '.$subject->topics->pluck('name')->implode(', ').')';
-        })->implode("\n- ");
+        $existingSubjects = Subject::with('topics')->get();
+        if ($existingSubjects->isNotEmpty()) {
+            $list = $existingSubjects->map(function ($subject) {
+                return $subject->name.' (Topics: '.$subject->topics->pluck('name')->implode(', ').')';
+            })->implode("\n- ");
+            $subjectsGuidance = "You can align with existing subjects or create clean new ones:\n- {$list}";
+        } else {
+            $subjectsGuidance = "Intelligently determine the standard Computer Science / IT Subject (e.g. 'Database Management Systems (DBMS)', 'Operating Systems', 'Digital Logic Design', 'Artificial Intelligence', 'Computer Networks', 'Data Structures & Algorithms', etc.) and the specific Topic (e.g. 'Indexing & B-Trees', 'Deadlocks', 'Boolean Algebra & K-Maps', 'Neural Networks', etc.).";
+        }
 
         return <<<PROMPT
 You are an expert Computer Science Professor and IT Competitive Exam Question Extractor.
@@ -30,11 +36,12 @@ Analyze the provided text or image carefully. Questions can be EITHER:
 1. "mcq" (Multiple Choice Questions with options A, B, C, D)
 2. "written" (Descriptive questions, Code writing, SQL queries, System design, Mathematical derivations, or Theoretical explanations)
 
-For each question, automatically detect whether it is "mcq" or "written".
-If code is part of the problem statement, isolate it in `code_snippet`.
-Check if any Competitive Exam name (e.g., "43rd BCS", "Sonali Bank Senior Officer IT", "BPSC Assistant Programmer", "Combined 8 Banks IT Officer", "Pubali Bank", "Agrani Bank", etc.) and Year (e.g., "2023", "2022", "2021") are mentioned in the question paper, header, watermark, or text.
-Map the subject and topic to the closest match from the following available IT subjects and topics:
-- {$subjectsList}
+For each question:
+- Automatically detect whether it is "mcq" or "written".
+- If code is part of the problem statement, isolate it in `code_snippet`.
+- Check if any Competitive Exam name (e.g., "43rd BCS", "Sonali Bank Senior Officer IT", "BPSC Assistant Programmer", "Combined 8 Banks IT Officer", "Pubali Bank", "Agrani Bank", etc.) and Year (e.g., "2023", "2022", "2021") are mentioned in the question paper, header, watermark, or text.
+- Intelligently categorize the Subject (`subject_name`) and Topic (`topic_name`) based on standard academic Computer Science curriculum:
+{$subjectsGuidance}
 
 Return a valid JSON array of objects following this schema:
 [
@@ -54,8 +61,8 @@ Return a valid JSON array of objects following this schema:
     "correct_option": "A or B or C or D" // (for mcq only, MUST be null for written),
     "written_answer": "Comprehensive model answer, complete code, SQL query, or technical solution for written questions (null for mcq)",
     "explanation": "Detailed technical explanation or marking guidelines",
-    "subject_name": "Closest matching Subject name from provided list",
-    "topic_name": "Closest matching Topic name from provided list",
+    "subject_name": "Standard IT/CS Subject name (e.g., Database Management Systems, Operating Systems, Digital Logic Design, Artificial Intelligence)",
+    "topic_name": "Specific Chapter/Topic name (e.g., SQL Queries, Process Scheduling, K-Maps, Neural Networks)",
     "difficulty": "easy or medium or hard"
   }
 ]
