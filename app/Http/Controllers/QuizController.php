@@ -1,0 +1,225 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Question;
+use App\Models\Quiz;
+use App\Models\QuizAttempt;
+use App\Models\QuizAttemptAnswer;
+use App\Models\Subject;
+use App\Services\StreakService;
+use Carbon\Carbon;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class QuizController extends Controller
+{
+    public function __construct(
+        protected StreakService $streakService
+    ) {}
+
+    /**
+     * Display quizzes list and mock tests.
+     */
+    public function index(Request $request): Response
+    {
+        $user = $request->user();
+
+        $quizzes = Quiz::with(['subject', 'topic'])
+            ->withCount('questions')
+            ->latest()
+            ->paginate(9);
+
+        $recentAttempts = QuizAttempt::with('quiz.subject')
+            ->where('user_id', $user->id)
+            ->latest()
+            ->take(8)
+            ->get();
+
+        $subjects = Subject::with('topics')->get();
+
+        return Inertia::render('Quizzes/Index', [
+            'quizzes' => $quizzes,
+            'recentAttempts' => $recentAttempts,
+            'subjects' => $subjects,
+        ]);
+    }
+
+    /**
+     * Show form to create a new quiz or mock test.
+     */
+    public function create(): Response
+    {
+        $subjects = Subject::with('topics')->get();
+        $totalQuestions = Question::count();
+
+        return Inertia::render('Quizzes/Create', [
+            'subjects' => $subjects,
+            'totalAvailableQuestions' => $totalQuestions,
+        ]);
+    }
+
+    /**
+     * Store a newly created quiz in database.
+     */
+    public function store(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'title' => 'required|string|max:200',
+            'subject_id' => 'nullable|exists:subjects,id',
+            'topic_id' => 'nullable|exists:topics,id',
+            'type' => 'required|in:practice,mock',
+            'question_count' => 'required|integer|min:3|max:50',
+            'duration_minutes' => 'required|integer|min:1|max:180',
+            'negative_marking' => 'required|numeric|min:0|max:1',
+            'description' => 'nullable|string',
+        ]);
+
+        $query = Question::query();
+
+        if (! empty($validated['subject_id'])) {
+            $query->where('subject_id', $validated['subject_id']);
+        }
+        if (! empty($validated['topic_id'])) {
+            $query->where('topic_id', $validated['topic_id']);
+        }
+
+        $questions = $query->inRandomOrder()->take($validated['question_count'])->get();
+
+        if ($questions->count() < 3) {
+            return redirect()->back()->withErrors([
+                'question_count' => 'এই বিষয়ের অধীনে পর্যাপ্ত প্রশ্ন পাওয়া যায়নি। অনুগ্রহ করে আরও কিছু প্রশ্ন যোগ করুন বা অন্য বিষয় বাছাই করুন।',
+            ]);
+        }
+
+        $quiz = Quiz::create([
+            'user_id' => $request->user()->id,
+            'subject_id' => $validated['subject_id'] ?? null,
+            'topic_id' => $validated['topic_id'] ?? null,
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
+            'type' => $validated['type'],
+            'duration_minutes' => $validated['duration_minutes'],
+            'total_marks' => $questions->count(),
+            'negative_marking' => $validated['negative_marking'],
+        ]);
+
+        // Attach questions to quiz
+        $attachData = [];
+        foreach ($questions as $index => $q) {
+            $attachData[$q->id] = ['order' => $index + 1];
+        }
+        $quiz->questions()->attach($attachData);
+
+        return redirect()->route('quizzes.show', $quiz)
+            ->with('success', 'মক টেস্ট তৈরি সম্পন্ন হয়েছে! পরীক্ষা শুরু করুন।');
+    }
+
+    /**
+     * Display the quiz taking interface.
+     */
+    public function show(Quiz $quiz): Response
+    {
+        $quiz->load(['subject', 'topic', 'questions']);
+
+        return Inertia::render('Quizzes/Take', [
+            'quiz' => $quiz,
+        ]);
+    }
+
+    /**
+     * Submit and grade the quiz attempt.
+     */
+    public function submit(Request $request, Quiz $quiz): RedirectResponse
+    {
+        $validated = $request->validate([
+            'answers' => 'required|array',
+            'time_spent_seconds' => 'required|integer|min:0',
+        ]);
+
+        $user = $request->user();
+        $quiz->load('questions');
+
+        $userAnswers = $validated['answers'];
+        $correctCount = 0;
+        $wrongCount = 0;
+        $answeredCount = 0;
+
+        $attemptAnswers = [];
+
+        foreach ($quiz->questions as $question) {
+            $selected = $userAnswers[$question->id] ?? null;
+
+            if ($selected !== null && $selected !== '') {
+                $answeredCount++;
+                $isCorrect = (strtoupper((string) $selected) === strtoupper((string) $question->correct_option));
+
+                if ($isCorrect) {
+                    $correctCount++;
+                } else {
+                    $wrongCount++;
+                }
+
+                $attemptAnswers[] = [
+                    'question_id' => $question->id,
+                    'selected_option' => $selected,
+                    'is_correct' => $isCorrect,
+                ];
+            } else {
+                $attemptAnswers[] = [
+                    'question_id' => $question->id,
+                    'selected_option' => null,
+                    'is_correct' => false,
+                ];
+            }
+        }
+
+        $negativeMark = (float) $quiz->negative_marking;
+        $totalScore = max(0, $correctCount - ($wrongCount * $negativeMark));
+        $totalQuestions = $quiz->questions->count();
+        $accuracyRate = $totalQuestions > 0 ? round(($correctCount / $totalQuestions) * 100, 2) : 0;
+
+        $attempt = QuizAttempt::create([
+            'user_id' => $user->id,
+            'quiz_id' => $quiz->id,
+            'total_questions' => $totalQuestions,
+            'answered_count' => $answeredCount,
+            'correct_count' => $correctCount,
+            'wrong_count' => $wrongCount,
+            'score' => $totalScore,
+            'accuracy_rate' => $accuracyRate,
+            'time_spent_seconds' => $validated['time_spent_seconds'],
+            'completed_at' => Carbon::now(),
+        ]);
+
+        foreach ($attemptAnswers as $ans) {
+            $ans['quiz_attempt_id'] = $attempt->id;
+            QuizAttemptAnswer::create($ans);
+        }
+
+        // Update user's daily goals and study streak
+        $this->streakService->recordQuizCompleted($user, $answeredCount);
+
+        return redirect()->route('quizzes.result', $attempt)
+            ->with('success', 'পরীক্ষা সম্পন্ন হয়েছে!');
+    }
+
+    /**
+     * Display detailed quiz result and answer reviews.
+     */
+    public function result(QuizAttempt $attempt): Response
+    {
+        $attempt->load([
+            'quiz.subject',
+            'quiz.topic',
+            'answers.question.subject',
+            'answers.question.topic',
+        ]);
+
+        return Inertia::render('Quizzes/Result', [
+            'attempt' => $attempt,
+        ]);
+    }
+}
