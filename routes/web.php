@@ -6,6 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\QuizController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -47,6 +48,9 @@ Route::middleware(['auth'])->group(function () {
 
     // Daily Goals
     Route::post('/daily-goal', [DailyGoalController::class, 'update'])->name('daily-goal.update');
+
+    // User Management
+    Route::resource('users', UserController::class)->only(['index', 'store', 'update', 'destroy']);
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

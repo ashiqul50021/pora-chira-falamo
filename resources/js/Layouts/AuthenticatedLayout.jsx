@@ -18,7 +18,8 @@ import {
     ChevronRight,
     Sparkles,
     ShieldAlert,
-    Target
+    Target,
+    Users
 } from 'lucide-react';
 
 export default function AuthenticatedLayout({ header, children }) {
@@ -80,6 +81,19 @@ export default function AuthenticatedLayout({ header, children }) {
                     href: route('analytics.index'),
                     active: route().current('analytics.index'),
                     icon: BarChart3,
+                },
+            ],
+        },
+        {
+            group: 'ম্যানেজমেন্ট',
+            items: [
+                {
+                    name: 'ইউজার ম্যানেজমেন্ট',
+                    href: route('users.index'),
+                    active: route().current('users.*'),
+                    icon: Users,
+                    badge: 'টিম',
+                    badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
                 },
             ],
         },

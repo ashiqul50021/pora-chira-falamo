@@ -38,6 +38,8 @@ class HandleInertiaRequests extends Middleware
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
+                    'role' => $user->role ?? 'candidate',
+                    'is_admin' => $user->isAdmin(),
                     'streak' => $user->studyStreak?->current_streak ?? 0,
                     'penalties' => $user->studyStreak?->penalty_count ?? 0,
                 ] : null,
