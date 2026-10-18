@@ -40,11 +40,16 @@ class QuestionController extends Controller
             $query->where('difficulty', $request->input('difficulty'));
         }
 
+        if ($request->filled('type')) {
+            $query->where('type', $request->input('type'));
+        }
+
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
                 $q->where('question_text', 'LIKE', "%{$search}%")
                     ->orWhere('explanation', 'LIKE', "%{$search}%")
+                    ->orWhere('written_answer', 'LIKE', "%{$search}%")
                     ->orWhere('code_snippet', 'LIKE', "%{$search}%");
             });
         }
@@ -55,7 +60,7 @@ class QuestionController extends Controller
         return Inertia::render('Questions/Index', [
             'questions' => $questions,
             'subjects' => $subjects,
-            'filters' => $request->only(['subject_id', 'topic_id', 'difficulty', 'search']),
+            'filters' => $request->only(['subject_id', 'topic_id', 'difficulty', 'type', 'search']),
         ]);
     }
 
@@ -140,13 +145,15 @@ class QuestionController extends Controller
             'topic' => 'required|string|min:2|max:150',
             'count' => 'nullable|integer|min:1|max:10',
             'difficulty' => 'nullable|string|in:easy,medium,hard',
+            'type' => 'nullable|string|in:mcq,written',
         ]);
 
         $count = (int) ($validated['count'] ?? 3);
         $difficulty = $validated['difficulty'] ?? 'medium';
+        $type = $validated['type'] ?? 'mcq';
 
         try {
-            $questions = $this->questionService->generateQuestions($validated['topic'], $count, $difficulty);
+            $questions = $this->questionService->generateQuestions($validated['topic'], $count, $difficulty, $type);
 
             return response()->json([
                 'success' => true,
@@ -168,9 +175,12 @@ class QuestionController extends Controller
     {
         $validated = $request->validate([
             'questions' => 'required|array|min:1',
+            'questions.*.type' => 'nullable|string|in:mcq,written',
             'questions.*.question_text' => 'required|string',
-            'questions.*.options' => 'required|array',
-            'questions.*.correct_option' => 'required|string|in:A,B,C,D,a,b,c,d',
+            'questions.*.options' => 'nullable|array',
+            'questions.*.correct_option' => 'nullable|string',
+            'questions.*.written_answer' => 'nullable|string',
+            'questions.*.marks' => 'nullable|integer|min:1|max:100',
             'questions.*.subject_name' => 'nullable|string',
             'questions.*.topic_name' => 'nullable|string',
             'questions.*.explanation' => 'nullable|string',
@@ -212,6 +222,10 @@ class QuestionController extends Controller
             $query->where('topic_id', $request->input('topic_id'));
         }
 
+        if ($request->filled('type')) {
+            $query->where('type', $request->input('type'));
+        }
+
         $questions = $query->take(20)->get();
         $subjects = Subject::with('topics')->get();
 
@@ -220,6 +234,7 @@ class QuestionController extends Controller
             'subjects' => $subjects,
             'selectedSubject' => $request->input('subject_id'),
             'selectedTopic' => $request->input('topic_id'),
+            'selectedType' => $request->input('type'),
         ]);
     }
 

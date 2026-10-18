@@ -16,7 +16,7 @@ class QuestionService
     ) {}
 
     /**
-     * System instruction prompt for parsing IT exam questions.
+     * System instruction prompt for parsing IT exam questions (Both MCQ and Written).
      */
     protected function getExtractionPrompt(): string
     {
@@ -25,27 +25,34 @@ class QuestionService
         })->implode("\n- ");
 
         return <<<PROMPT
-You are an expert IT Exam Question Extractor and Computer Science Professor.
-Analyze the provided text or image carefully and extract all multiple-choice questions (MCQs).
-If code is part of the question, isolate it in the `code_snippet` field.
+You are an expert Computer Science Professor and IT Competitive Exam Question Extractor.
+Analyze the provided text or image carefully. Questions can be EITHER:
+1. "mcq" (Multiple Choice Questions with options A, B, C, D)
+2. "written" (Descriptive questions, Code writing, SQL queries, System design, Mathematical derivations, or Theoretical explanations)
+
+For each question, automatically detect whether it is "mcq" or "written".
+If code is part of the problem statement, isolate it in `code_snippet`.
 Map the subject and topic to the closest match from the following available IT subjects and topics:
 - {$subjectsList}
 
-Return a valid JSON array of objects. Each object MUST strictly follow this JSON schema:
+Return a valid JSON array of objects following this schema:
 [
   {
-    "question_text": "Question statement without options or code",
-    "code_snippet": "Optional code snippet if present, else null",
+    "type": "mcq or written",
+    "marks": 1 for mcq (or 5, 10 for written based on difficulty/length),
+    "question_text": "Clean question statement without options or code",
+    "code_snippet": "Optional code snippet from question statement, else null",
     "options": {
       "A": "Option text A",
       "B": "Option text B",
       "C": "Option text C",
       "D": "Option text D"
-    },
-    "correct_option": "A or B or C or D",
-    "explanation": "Detailed technical explanation explaining why the correct option is right and others are wrong",
-    "subject_name": "Closest matching Subject name from the provided list",
-    "topic_name": "Closest matching Topic name from the provided list",
+    } // (for mcq only, MUST be null for written),
+    "correct_option": "A or B or C or D" // (for mcq only, MUST be null for written),
+    "written_answer": "Comprehensive model answer, complete code, SQL query, or technical solution for written questions (null for mcq)",
+    "explanation": "Detailed technical explanation or marking guidelines",
+    "subject_name": "Closest matching Subject name from provided list",
+    "topic_name": "Closest matching Topic name from provided list",
     "difficulty": "easy or medium or hard"
   }
 ]
@@ -60,7 +67,7 @@ PROMPT;
      */
     public function extractFromText(string $rawText): array
     {
-        $prompt = $this->getExtractionPrompt()."\n\nHere is the raw text to extract questions from:\n\"\"\"\n{$rawText}\n\"\"\"";
+        $prompt = $this->getExtractionPrompt()."\n\nHere is the raw text to extract questions from (both MCQ and Written):\n\"\"\"\n{$rawText}\n\"\"\"";
 
         $result = $this->gemini->generateJson($prompt);
 
@@ -77,7 +84,7 @@ PROMPT;
         $base64 = base64_encode(file_get_contents($image->getRealPath()));
         $mimeType = $image->getMimeType() ?: 'image/jpeg';
 
-        $prompt = $this->getExtractionPrompt()."\n\nExtract all multiple choice questions shown in this image.";
+        $prompt = $this->getExtractionPrompt()."\n\nExtract all questions (both MCQ and Written) shown in this exam paper or book page.";
 
         $result = $this->gemini->extractFromImage($base64, $mimeType, $prompt, true);
 
@@ -93,9 +100,13 @@ PROMPT;
      *
      * @return array<int, array<string, mixed>>
      */
-    public function generateQuestions(string $topicOrSubject, int $count = 3, string $difficulty = 'medium'): array
+    public function generateQuestions(string $topicOrSubject, int $count = 3, string $difficulty = 'medium', string $type = 'mcq'): array
     {
-        $prompt = $this->getExtractionPrompt()."\n\nGenerate {$count} high-quality IT exam multiple choice questions on \"{$topicOrSubject}\" with difficulty \"{$difficulty}\". Include technical code or architecture scenarios where relevant.";
+        $typeInstruction = $type === 'written'
+            ? 'Generate high-quality WRITTEN IT exam questions (e.g., write efficient code, write SQL query, explain internal mechanism, or design architecture) with complete model answers in `written_answer`.'
+            : 'Generate high-quality multiple choice MCQ questions with 4 options and correct answer.';
+
+        $prompt = $this->getExtractionPrompt()."\n\nTask: {$typeInstruction} on \"{$topicOrSubject}\" with difficulty \"{$difficulty}\". Generate {$count} questions.";
 
         $result = $this->gemini->generateJson($prompt);
 
@@ -137,21 +148,24 @@ PROMPT;
             }
         }
 
-        // Format options
-        $options = $data['options'] ?? [];
-        if (! is_array($options)) {
-            $options = [];
-        }
+        $type = in_array($data['type'] ?? '', ['mcq', 'written']) ? $data['type'] : 'mcq';
+        $options = $type === 'mcq' && is_array($data['options'] ?? null) ? $data['options'] : null;
+        $correctOption = $type === 'mcq' && ! empty($data['correct_option']) ? strtoupper(trim((string) $data['correct_option'])) : null;
+        $writtenAnswer = $type === 'written' ? ($data['written_answer'] ?? $data['explanation'] ?? null) : null;
+        $marks = (int) ($data['marks'] ?? ($type === 'written' ? 5 : 1));
 
         return Question::create([
             'user_id' => $userId,
             'subject_id' => $subject->id,
             'topic_id' => $topic?->id,
+            'type' => $type,
+            'marks' => $marks,
             'question_text' => $data['question_text'] ?? '',
             'code_snippet' => $data['code_snippet'] ?? null,
             'image_path' => $data['image_path'] ?? null,
             'options' => $options,
-            'correct_option' => strtoupper(trim((string) ($data['correct_option'] ?? 'A'))),
+            'correct_option' => $correctOption,
+            'written_answer' => $writtenAnswer,
             'explanation' => $data['explanation'] ?? null,
             'difficulty' => in_array($data['difficulty'] ?? '', ['easy', 'medium', 'hard']) ? $data['difficulty'] : 'medium',
             'source' => $source,

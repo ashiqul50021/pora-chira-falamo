@@ -20,6 +20,7 @@ export default function Index({ questions, subjects, filters }) {
     const [selectedSubject, setSelectedSubject] = useState(filters.subject_id || '');
     const [selectedTopic, setSelectedTopic] = useState(filters.topic_id || '');
     const [selectedDifficulty, setSelectedDifficulty] = useState(filters.difficulty || '');
+    const [selectedType, setSelectedType] = useState(filters.type || '');
     const [expandedQuestionId, setExpandedQuestionId] = useState(null);
 
     const handleSearch = (e) => {
@@ -31,6 +32,7 @@ export default function Index({ questions, subjects, filters }) {
                 subject_id: selectedSubject,
                 topic_id: selectedTopic,
                 difficulty: selectedDifficulty,
+                type: selectedType,
             },
             { preserveState: true }
         );
@@ -41,6 +43,7 @@ export default function Index({ questions, subjects, filters }) {
         setSelectedSubject('');
         setSelectedTopic('');
         setSelectedDifficulty('');
+        setSelectedType('');
         router.get(route('questions.index'));
     };
 
@@ -92,7 +95,7 @@ export default function Index({ questions, subjects, filters }) {
 
             {/* Filter Bar */}
             <form onSubmit={handleSearch} className="mb-6 p-4 rounded-2xl bg-slate-800/80 border border-slate-700 shadow-md">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
                     <div className="lg:col-span-2 relative">
                         <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                         <input
@@ -102,6 +105,18 @@ export default function Index({ questions, subjects, filters }) {
                             placeholder="প্রশ্ন, ব্যাখ্যা বা কোড খুঁজুন..."
                             className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-indigo-500"
                         />
+                    </div>
+
+                    <div>
+                        <select
+                            value={selectedType}
+                            onChange={(e) => setSelectedType(e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-indigo-500"
+                        >
+                            <option value="">সকল ফরম্যাট (All)</option>
+                            <option value="mcq">শুধু MCQ</option>
+                            <option value="written">শুধু লিখিত (Written)</option>
+                        </select>
                     </div>
 
                     <div>
@@ -144,10 +159,10 @@ export default function Index({ questions, subjects, filters }) {
                             onChange={(e) => setSelectedDifficulty(e.target.value)}
                             className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-indigo-500"
                         >
-                            <option value="">সকল ডিফিকাল্টি</option>
-                            <option value="easy">সহজ (Easy)</option>
-                            <option value="medium">মাঝারি (Medium)</option>
-                            <option value="hard">কঠিন (Hard)</option>
+                            <option value="">সকল লেভেল</option>
+                            <option value="easy">সহজ</option>
+                            <option value="medium">মাঝারি</option>
+                            <option value="hard">কঠিন</option>
                         </select>
 
                         <button
@@ -179,6 +194,7 @@ export default function Index({ questions, subjects, filters }) {
                 <div className="space-y-4">
                     {questions.data.map((q, idx) => {
                         const isExpanded = expandedQuestionId === q.id;
+                        const isWritten = q.type === 'written';
 
                         return (
                             <div
@@ -186,7 +202,15 @@ export default function Index({ questions, subjects, filters }) {
                                 className="p-5 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700 shadow-md transition"
                             >
                                 <div className="flex justify-between items-start gap-4 mb-2">
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                                            isWritten
+                                                ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                                                : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                                        }`}>
+                                            {isWritten ? `লিখিত (${q.marks || 5} মার্কস)` : 'MCQ'}
+                                        </span>
+
                                         <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 text-xs font-semibold">
                                             {q.subject?.name}
                                         </span>
@@ -204,7 +228,7 @@ export default function Index({ questions, subjects, filters }) {
                                         <button
                                             onClick={() => setExpandedQuestionId(isExpanded ? null : q.id)}
                                             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-700 transition"
-                                            title="ব্যাখ্যা দেখুন"
+                                            title="ব্যাখ্যা / মডেল উত্তর দেখুন"
                                         >
                                             {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                                         </button>
@@ -228,38 +252,69 @@ export default function Index({ questions, subjects, filters }) {
                                     </div>
                                 )}
 
-                                {/* Options 2x2 grid */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
-                                    {Object.entries(q.options || {}).map(([key, val]) => (
-                                        <div
-                                            key={key}
-                                            className={`p-2.5 rounded-xl border text-xs flex items-center gap-2.5 ${
-                                                key.toUpperCase() === q.correct_option.toUpperCase()
-                                                    ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300 font-medium'
-                                                    : 'bg-slate-900/40 border-slate-700/60 text-slate-300'
-                                            }`}
+                                {/* If Written: show preview banner, else show MCQ options */}
+                                {isWritten ? (
+                                    <div className="mb-3 p-3 rounded-xl bg-slate-900/60 border border-slate-700/60 flex items-center justify-between">
+                                        <div className="flex items-center gap-2 text-xs text-slate-300">
+                                            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                                            <span>লিখিত প্রশ্নটির আদর্শ মডেল উত্তর ডাটাবেসে সেভ আছে।</span>
+                                        </div>
+                                        <button
+                                            onClick={() => setExpandedQuestionId(isExpanded ? null : q.id)}
+                                            className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition"
                                         >
-                                            <span
-                                                className={`w-5 h-5 rounded font-bold flex items-center justify-center text-[10px] shrink-0 ${
-                                                    key.toUpperCase() === q.correct_option.toUpperCase()
-                                                        ? 'bg-emerald-600 text-white'
-                                                        : 'bg-slate-800 text-slate-400'
+                                            {isExpanded ? 'লুকান' : 'মডেল উত্তর দেখুন'}
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+                                        {Object.entries(q.options || {}).map(([key, val]) => (
+                                            <div
+                                                key={key}
+                                                className={`p-2.5 rounded-xl border text-xs flex items-center gap-2.5 ${
+                                                    key.toUpperCase() === (q.correct_option || '').toUpperCase()
+                                                        ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300 font-medium'
+                                                        : 'bg-slate-900/40 border-slate-700/60 text-slate-300'
                                                 }`}
                                             >
-                                                {key}
-                                            </span>
-                                            <span>{val}</span>
-                                        </div>
-                                    ))}
-                                </div>
+                                                <span
+                                                    className={`w-5 h-5 rounded font-bold flex items-center justify-center text-[10px] shrink-0 ${
+                                                        key.toUpperCase() === (q.correct_option || '').toUpperCase()
+                                                            ? 'bg-emerald-600 text-white'
+                                                            : 'bg-slate-800 text-slate-400'
+                                                    }`}
+                                                >
+                                                    {key}
+                                                </span>
+                                                <span>{val}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
 
-                                {/* Expanded Explanation */}
-                                {isExpanded && q.explanation && (
-                                    <div className="mt-3 p-3.5 rounded-xl bg-slate-900/80 border border-indigo-500/20 text-xs text-slate-300 leading-relaxed">
-                                        <span className="font-semibold text-indigo-400 block mb-1">
-                                            সঠিক উত্তরের ব্যাখ্যা:
-                                        </span>
-                                        {q.explanation}
+                                {/* Expanded Area for Model Answer and/or Explanation */}
+                                {isExpanded && (
+                                    <div className="mt-3 space-y-3">
+                                        {isWritten && q.written_answer && (
+                                            <div className="p-4 rounded-xl bg-slate-950 border border-emerald-500/30 text-xs sm:text-sm text-emerald-200">
+                                                <span className="font-semibold text-emerald-400 block mb-1.5 flex items-center gap-1.5">
+                                                    <CheckCircle2 className="w-4 h-4" />
+                                                    <span>মডেল সমাধান ও লিখিত উত্তর:</span>
+                                                </span>
+                                                <div className="font-mono whitespace-pre-wrap leading-relaxed text-slate-200">
+                                                    {q.written_answer}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {q.explanation && (
+                                            <div className="p-3.5 rounded-xl bg-slate-900/80 border border-indigo-500/20 text-xs text-slate-300 leading-relaxed">
+                                                <span className="font-semibold text-indigo-400 block mb-1">
+                                                    {isWritten ? 'অতিরিক্ত ব্যাখ্যা বা নোট:' : 'সঠিক উত্তরের ব্যাখ্যা:'}
+                                                </span>
+                                                {q.explanation}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>

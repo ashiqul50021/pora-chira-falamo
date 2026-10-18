@@ -77,7 +77,7 @@ class QuizController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        $query = Question::query();
+        $query = Question::query()->where('type', 'mcq');
 
         if (! empty($validated['subject_id'])) {
             $query->where('subject_id', $validated['subject_id']);

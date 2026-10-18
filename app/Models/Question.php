@@ -17,11 +17,14 @@ class Question extends Model
         'user_id',
         'subject_id',
         'topic_id',
+        'type',
+        'marks',
         'question_text',
         'code_snippet',
         'image_path',
         'options',
         'correct_option',
+        'written_answer',
         'explanation',
         'difficulty',
         'source',
@@ -34,6 +37,7 @@ class Question extends Model
     {
         return [
             'options' => 'array',
+            'marks' => 'integer',
         ];
     }
 

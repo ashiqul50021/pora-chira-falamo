@@ -31,6 +31,7 @@ export default function Upload({ subjects }) {
     const [generateTopic, setGenerateTopic] = useState('Database Indexing & B-Trees');
     const [generateCount, setGenerateCount] = useState(3);
     const [generateDifficulty, setGenerateDifficulty] = useState('medium');
+    const [generateType, setGenerateType] = useState('mcq');
 
     const handleImageSubmit = async (e) => {
         const file = e.target.files?.[0];
@@ -92,6 +93,7 @@ export default function Upload({ subjects }) {
                 topic: generateTopic,
                 count: generateCount,
                 difficulty: generateDifficulty,
+                type: generateType,
             });
 
             if (res.data.success) {
@@ -263,7 +265,7 @@ export default function Upload({ subjects }) {
                 {/* Tab 3: AI Question Generator */}
                 {activeTab === 'generate' && (
                     <form onSubmit={handleGenerateSubmit} className="space-y-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                             <div className="sm:col-span-2">
                                 <label className="block text-xs font-semibold text-slate-300 mb-1">
                                     আইটি টপিক বা বিষয়ের নাম:
@@ -276,6 +278,20 @@ export default function Upload({ subjects }) {
                                     className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-indigo-500"
                                     required
                                 />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                                    প্রশ্নের ফরম্যাট:
+                                </label>
+                                <select
+                                    value={generateType}
+                                    onChange={(e) => setGenerateType(e.target.value)}
+                                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-indigo-500 font-medium"
+                                >
+                                    <option value="mcq">MCQ প্রশ্ন (৪ অপশন)</option>
+                                    <option value="written">লিখিত প্রশ্ন (Written)</option>
+                                </select>
                             </div>
 
                             <div>
@@ -366,10 +382,35 @@ export default function Upload({ subjects }) {
                                 className="p-5 rounded-xl bg-[#0f172a] border border-slate-800 shadow-sm"
                             >
                                 <div className="flex justify-between items-start gap-3 mb-3">
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex flex-wrap items-center gap-2">
                                         <span className="w-6 h-6 rounded-md bg-indigo-600 text-white flex items-center justify-center text-xs font-bold">
                                             #{idx + 1}
                                         </span>
+
+                                        <select
+                                            value={q.type || 'mcq'}
+                                            onChange={(e) => handleQuestionChange(idx, 'type', e.target.value)}
+                                            className="px-2 py-1 rounded-lg bg-slate-900 border border-slate-700 text-xs font-bold text-amber-400 focus:outline-none focus:border-amber-500"
+                                        >
+                                            <option value="mcq">MCQ</option>
+                                            <option value="written">লিখিত (Written)</option>
+                                        </select>
+
+                                        {q.type === 'written' && (
+                                            <div className="flex items-center gap-1 bg-slate-900 px-2 py-1 rounded-lg border border-slate-700">
+                                                <span className="text-[11px] text-slate-400">মান:</span>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    max="50"
+                                                    value={q.marks || 5}
+                                                    onChange={(e) => handleQuestionChange(idx, 'marks', e.target.value)}
+                                                    className="w-12 bg-transparent text-xs text-emerald-400 font-semibold focus:outline-none p-0 border-0"
+                                                    title="প্রশ্নের পূর্ণমান"
+                                                />
+                                            </div>
+                                        )}
+
                                         <input
                                             type="text"
                                             value={q.subject_name || ''}
@@ -425,43 +466,60 @@ export default function Upload({ subjects }) {
                                     </div>
                                 )}
 
-                                {/* Options */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
-                                    {['A', 'B', 'C', 'D'].map((opt) => (
-                                        <div
-                                            key={opt}
-                                            className={`p-2 rounded-lg border flex items-center gap-2 ${
-                                                q.correct_option?.toUpperCase() === opt
-                                                    ? 'bg-emerald-500/10 border-emerald-500/40'
-                                                    : 'bg-slate-900 border-slate-800'
-                                            }`}
-                                        >
-                                            <button
-                                                type="button"
-                                                onClick={() => handleQuestionChange(idx, 'correct_option', opt)}
-                                                className={`w-5 h-5 rounded text-[11px] font-bold flex items-center justify-center shrink-0 ${
+                                {/* If Written Question: Show Written Answer / Model Solution */}
+                                {q.type === 'written' ? (
+                                    <div className="mb-3">
+                                        <label className="block text-[11px] font-semibold text-emerald-400 mb-1 flex items-center gap-1.5">
+                                            <CheckCircle2 className="w-3.5 h-3.5" />
+                                            <span>মডেল উত্তর ও লিখিত সমাধান (কোড / SQL / থিওরি):</span>
+                                        </label>
+                                        <textarea
+                                            rows={4}
+                                            value={q.written_answer || q.explanation || ''}
+                                            onChange={(e) => handleQuestionChange(idx, 'written_answer', e.target.value)}
+                                            placeholder="মডেল সমাধান বা লিখিত উত্তর লিখুন..."
+                                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-emerald-500/30 text-emerald-300 text-xs font-mono focus:outline-none focus:border-emerald-500"
+                                        />
+                                    </div>
+                                ) : (
+                                    /* If MCQ Question: Show 4 Options */
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+                                        {['A', 'B', 'C', 'D'].map((opt) => (
+                                            <div
+                                                key={opt}
+                                                className={`p-2 rounded-lg border flex items-center gap-2 ${
                                                     q.correct_option?.toUpperCase() === opt
-                                                        ? 'bg-emerald-600 text-white'
-                                                        : 'bg-slate-800 text-slate-400'
+                                                        ? 'bg-emerald-500/10 border-emerald-500/40'
+                                                        : 'bg-slate-900 border-slate-800'
                                                 }`}
                                             >
-                                                {opt}
-                                            </button>
-                                            <input
-                                                type="text"
-                                                value={q.options?.[opt] || ''}
-                                                onChange={(e) => handleOptionChange(idx, opt, e.target.value)}
-                                                placeholder={`অপশন ${opt}`}
-                                                className="w-full bg-transparent border-0 p-0 text-xs text-slate-200 focus:outline-none"
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleQuestionChange(idx, 'correct_option', opt)}
+                                                    className={`w-5 h-5 rounded text-[11px] font-bold flex items-center justify-center shrink-0 ${
+                                                        q.correct_option?.toUpperCase() === opt
+                                                            ? 'bg-emerald-600 text-white'
+                                                            : 'bg-slate-800 text-slate-400'
+                                                    }`}
+                                                >
+                                                    {opt}
+                                                </button>
+                                                <input
+                                                    type="text"
+                                                    value={q.options?.[opt] || ''}
+                                                    onChange={(e) => handleOptionChange(idx, opt, e.target.value)}
+                                                    placeholder={`অপশন ${opt}`}
+                                                    className="w-full bg-transparent border-0 p-0 text-xs text-slate-200 focus:outline-none"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
 
                                 {/* Explanation */}
                                 <div>
                                     <label className="block text-[11px] font-semibold text-slate-400 mb-1">
-                                        সঠিক উত্তরের টেকনিক্যাল ব্যাখ্যা:
+                                        অতিরিক্ত টেকনিক্যাল ব্যাখ্যা বা নোট:
                                     </label>
                                     <textarea
                                         rows={2}
