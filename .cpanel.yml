@@ -1,0 +1,5 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/ashiquli/pora-chira-falamo/
+    - /bin/cp -R * $DEPLOYPATH
