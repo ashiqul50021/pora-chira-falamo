@@ -7,6 +7,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\QuizController;
 use App\Http\Controllers\UserController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -56,6 +57,28 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
+// Automated GitHub Deployment Webhook
+Route::match(['get', 'post'], '/git-deploy-webhook', function (Request $request) {
+    if ($request->input('token') !== 'pora2026auto' && $request->query('token') !== 'pora2026auto') {
+        abort(403, 'Unauthorized deploy token');
+    }
+
+    $basePath = base_path();
+    $commands = [
+        "cd {$basePath} && git pull origin master 2>&1",
+        "cd {$basePath} && php artisan optimize:clear 2>&1",
+        "cd {$basePath} && php artisan optimize 2>&1",
+    ];
+
+    $log = [];
+    foreach ($commands as $cmd) {
+        $output = @shell_exec($cmd);
+        $log[] = "COMMAND: {$cmd}\nOUTPUT:\n".($output ?: '(executed / no direct shell output)');
+    }
+
+    return response('<pre style="background:#0b0f17;color:#38bdf8;padding:20px;font-family:monospace;border-radius:10px;">'.implode("\n\n------------------\n\n", $log).'</pre>');
 });
 
 require __DIR__.'/auth.php';
