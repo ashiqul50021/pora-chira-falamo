@@ -102,26 +102,37 @@ PROMPT;
     }
 
     /**
-     * Extract questions from an uploaded image.
+     * Extract questions from one or multiple uploaded images.
      *
+     * @param  array<int, UploadedFile>  $images
      * @return array<int, array<string, mixed>>
      */
-    public function extractFromImage(UploadedFile $image, ?string $defaultExam = null, ?string $defaultYear = null): array
+    public function extractFromMultipleImages(array $images, ?string $defaultExam = null, ?string $defaultYear = null): array
     {
-        $base64 = base64_encode(file_get_contents($image->getRealPath()));
-        $mimeType = $image->getMimeType() ?: 'image/jpeg';
+        if (empty($images)) {
+            return [];
+        }
+
+        $imagesData = [];
+        foreach ($images as $img) {
+            $imagesData[] = [
+                'data' => base64_encode(file_get_contents($img->getRealPath())),
+                'mime_type' => $img->getMimeType() ?: 'image/jpeg',
+            ];
+        }
 
         $context = '';
         if ($defaultExam || $defaultYear) {
             $context = "\nNote: User specified this exam is \"{$defaultExam}\" and year is \"{$defaultYear}\". Assign these if not stated otherwise.";
         }
 
-        $prompt = $this->getExtractionPrompt()."{$context}\n\nExtract all questions (both MCQ and Written) shown in this exam paper or book page.";
+        $imageCount = count($images);
+        $prompt = $this->getExtractionPrompt()."{$context}\n\nExtract all questions (both MCQ and Written) shown across these {$imageCount} exam paper pages or book images.";
 
-        $result = $this->gemini->extractFromImage($base64, $mimeType, $prompt, true);
+        $result = $this->gemini->extractFromMultipleImages($imagesData, $prompt, true);
 
         if (! is_array($result)) {
-            throw new RuntimeException('Gemini did not return an array from the image.');
+            throw new RuntimeException('Gemini did not return an array from the images.');
         }
 
         $questions = $this->normalizeQuestionsResult($result);
@@ -138,6 +149,16 @@ PROMPT;
         }
 
         return $questions;
+    }
+
+    /**
+     * Extract questions from an uploaded image.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function extractFromImage(UploadedFile $image, ?string $defaultExam = null, ?string $defaultYear = null): array
+    {
+        return $this->extractFromMultipleImages([$image], $defaultExam, $defaultYear);
     }
 
     /**

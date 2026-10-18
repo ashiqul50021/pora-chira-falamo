@@ -119,32 +119,54 @@ class QuestionController extends Controller
     public function extractImage(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'image' => 'required|image|max:10240', // max 10MB
+            'images' => 'nullable|array|min:1|max:10',
+            'images.*' => 'image|max:10240',
+            'image' => 'nullable|image|max:10240',
             'exam_name' => 'nullable|string|max:150',
             'year' => 'nullable|string|max:10',
         ]);
 
+        $files = [];
+        if ($request->hasFile('images')) {
+            $files = $request->file('images');
+        } elseif ($request->hasFile('image')) {
+            $files = [$request->file('image')];
+        }
+
+        if (empty($files)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'অনুগ্রহ করে অন্তত একটি ছবি সিলেক্ট করুন।',
+            ], 422);
+        }
+
         try {
-            $imageFile = $request->file('image');
-            $questions = $this->questionService->extractFromImage(
-                $imageFile,
+            $questions = $this->questionService->extractFromMultipleImages(
+                $files,
                 $validated['exam_name'] ?? null,
                 $validated['year'] ?? null
             );
 
-            // Store image if user wants to keep a copy
-            $storedPath = $imageFile->store('question-uploads', 'public');
+            // Store all images
+            $storedUrls = [];
+            foreach ($files as $file) {
+                $storedPath = $file->store('question-uploads', 'public');
+                $storedUrls[] = Storage::url($storedPath);
+            }
+
+            $primaryImageUrl = $storedUrls[0] ?? null;
 
             // Attach image path to extracted questions
             foreach ($questions as &$q) {
-                $q['image_path'] = Storage::url($storedPath);
+                $q['image_path'] = $primaryImageUrl;
             }
 
             return response()->json([
                 'success' => true,
                 'questions' => $questions,
                 'count' => count($questions),
-                'image_url' => Storage::url($storedPath),
+                'image_url' => $primaryImageUrl,
+                'image_urls' => $storedUrls,
             ]);
         } catch (\Exception $e) {
             return response()->json([

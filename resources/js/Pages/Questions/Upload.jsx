@@ -16,7 +16,10 @@ import {
     HelpCircle,
     ArrowRight,
     Sliders,
-    Layers
+    Layers,
+    Plus,
+    X,
+    Images
 } from 'lucide-react';
 
 export default function Upload({ subjects }) {
@@ -25,6 +28,9 @@ export default function Upload({ subjects }) {
     const [error, setError] = useState(null);
     const [extractedQuestions, setExtractedQuestions] = useState([]);
     const [uploadedImageUrl, setUploadedImageUrl] = useState(null);
+    const [uploadedImageUrls, setUploadedImageUrls] = useState([]);
+    const [selectedImages, setSelectedImages] = useState([]);
+    const [isDragging, setIsDragging] = useState(false);
 
     // Form states
     const [rawText, setRawText] = useState('');
@@ -35,15 +41,56 @@ export default function Upload({ subjects }) {
     const [generateDifficulty, setGenerateDifficulty] = useState('medium');
     const [generateType, setGenerateType] = useState('mcq');
 
-    const handleImageSubmit = async (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+    const addFiles = (files) => {
+        if (!files || files.length === 0) return;
+        const newItems = Array.from(files)
+            .filter((f) => f.type.startsWith('image/'))
+            .map((file) => ({
+                id: Math.random().toString(36).substring(2, 9),
+                file,
+                preview: URL.createObjectURL(file),
+                name: file.name,
+                size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
+            }));
+
+        setSelectedImages((prev) => [...prev, ...newItems]);
+        setError(null);
+    };
+
+    const handleFilesSelect = (e) => {
+        addFiles(e.target.files);
+        // Reset input value so same files can be chosen again if needed
+        e.target.value = '';
+    };
+
+    const removeImage = (id) => {
+        setSelectedImages((prev) => {
+            const item = prev.find((img) => img.id === id);
+            if (item?.preview) URL.revokeObjectURL(item.preview);
+            return prev.filter((img) => img.id !== id);
+        });
+    };
+
+    const clearAllImages = () => {
+        selectedImages.forEach((img) => {
+            if (img.preview) URL.revokeObjectURL(img.preview);
+        });
+        setSelectedImages([]);
+    };
+
+    const handleImageSubmit = async () => {
+        if (selectedImages.length === 0) {
+            setError('অনুগ্রহ করে অন্তত একটি ছবি সিলেক্ট করুন।');
+            return;
+        }
 
         setLoading(true);
         setError(null);
 
         const formData = new FormData();
-        formData.append('image', file);
+        selectedImages.forEach((img) => {
+            formData.append('images[]', img.file);
+        });
         if (uploadExamName.trim()) formData.append('exam_name', uploadExamName.trim());
         if (uploadYear.trim()) formData.append('year', uploadYear.trim());
 
@@ -55,6 +102,7 @@ export default function Upload({ subjects }) {
             if (res.data.success) {
                 setExtractedQuestions(res.data.questions);
                 setUploadedImageUrl(res.data.image_url);
+                setUploadedImageUrls(res.data.image_urls || []);
             }
         } catch (err) {
             setError(err.response?.data?.message || 'ছবি থেকে প্রশ্ন বিশ্লেষণ করতে সমস্যা হয়েছে।');
@@ -245,25 +293,150 @@ export default function Upload({ subjects }) {
                             </div>
                         </div>
 
-                        <div className="border border-dashed border-slate-700 hover:border-slate-600 rounded-xl p-8 text-center bg-slate-900/40 transition">
-                            <UploadCloud className="w-10 h-10 text-slate-400 mx-auto mb-2.5" />
-                            <h4 className="text-sm font-semibold text-white mb-1">
-                                প্রশ্নপত্র বা বইয়ের পাতার ছবি ড্রপ করুন
-                            </h4>
-                            <p className="text-xs text-slate-400 max-w-md mx-auto mb-4">
-                                PNG, JPG, JPEG ফরম্যাট সমর্থিত। Gemini Vision স্বয়ংক্রিয়ভাবে পরীক্ষার নাম, সাল, প্রশ্ন ও সলিউশন ডিটেক্ট করবে।
-                            </p>
-                            <label className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 cursor-pointer transition">
-                                <span>কম্পিউটার থেকে ছবি ব্রাউজ করুন</span>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handleImageSubmit}
-                                    disabled={loading}
-                                    className="hidden"
-                                />
-                            </label>
-                        </div>
+                        {/* Dropzone & Multi-Image Gallery */}
+                        {selectedImages.length === 0 ? (
+                            <div
+                                onDragOver={(e) => {
+                                    e.preventDefault();
+                                    setIsDragging(true);
+                                }}
+                                onDragLeave={() => setIsDragging(false)}
+                                onDrop={(e) => {
+                                    e.preventDefault();
+                                    setIsDragging(false);
+                                    if (e.dataTransfer.files?.length) {
+                                        addFiles(e.dataTransfer.files);
+                                    }
+                                }}
+                                className={`border-2 border-dashed rounded-2xl p-8 sm:p-10 text-center transition ${
+                                    isDragging
+                                        ? 'border-indigo-500 bg-indigo-500/10'
+                                        : 'border-slate-800 hover:border-slate-700 bg-slate-950/40'
+                                }`}
+                            >
+                                <div className="w-14 h-14 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto mb-3">
+                                    <Images className="w-7 h-7" />
+                                </div>
+                                <h4 className="text-sm sm:text-base font-bold text-white mb-1">
+                                    এক বা একাধিক প্রশ্নপত্র বা বইয়ের পাতার ছবি আপলোড করুন
+                                </h4>
+                                <p className="text-xs text-slate-400 max-w-lg mx-auto mb-4 leading-relaxed">
+                                    PNG, JPG, JPEG ফরম্যাট সমর্থিত (সর্বোচ্চ ১০টি ছবি)। ড্রপ করুন অথবা ব্রাউজ করে একসাথে বহু ছবি সিলেক্ট করুন। Gemini Vision সব পাতা একসাথে পড়ে প্রশ্ন ও সমাধান ডিটেক্ট করবে।
+                                </p>
+                                <label className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-semibold shadow-lg shadow-indigo-600/30 cursor-pointer transition">
+                                    <UploadCloud className="w-4 h-4" />
+                                    <span>কম্পিউটার থেকে ছবিগুলো সিলেক্ট করুন (Multiple)</span>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        multiple
+                                        onChange={handleFilesSelect}
+                                        disabled={loading}
+                                        className="hidden"
+                                    />
+                                </label>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800 flex flex-wrap items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-xs">
+                                            {selectedImages.length}
+                                        </div>
+                                        <div>
+                                            <span className="text-xs font-bold text-white">
+                                                নির্বাচিত ছবিসমূহ ({selectedImages.length}টি পাতা)
+                                            </span>
+                                            <div className="text-[11px] text-slate-400">
+                                                প্রয়োজনে আরও ছবি যোগ করতে পারেন অথবা অপ্রয়োজনীয় ছবি মুছে ফেলতে পারেন
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-300 text-xs font-semibold border border-slate-700 cursor-pointer transition">
+                                            <Plus className="w-3.5 h-3.5" />
+                                            <span>আরও ছবি যোগ করুন</span>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                multiple
+                                                onChange={handleFilesSelect}
+                                                disabled={loading}
+                                                className="hidden"
+                                            />
+                                        </label>
+
+                                        <button
+                                            type="button"
+                                            onClick={clearAllImages}
+                                            disabled={loading}
+                                            className="px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 text-xs font-semibold transition"
+                                        >
+                                            সব মুছুন
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Thumbnail Grid */}
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
+                                    {selectedImages.map((img, idx) => (
+                                        <div
+                                            key={img.id}
+                                            className="group relative rounded-xl bg-slate-900 border border-slate-800 overflow-hidden shadow-sm hover:border-slate-700 transition"
+                                        >
+                                            <div className="aspect-[3/4] w-full bg-slate-950 overflow-hidden relative">
+                                                <img
+                                                    src={img.preview}
+                                                    alt={`Page ${idx + 1}`}
+                                                    className="w-full h-full object-cover object-top group-hover:scale-105 transition duration-300"
+                                                />
+                                                <div className="absolute top-2 left-2 bg-black/75 backdrop-blur-sm text-indigo-300 text-[10px] font-bold px-2 py-0.5 rounded-md border border-white/10">
+                                                    পাতা #{idx + 1}
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeImage(img.id)}
+                                                    disabled={loading}
+                                                    className="absolute top-2 right-2 p-1 rounded-md bg-rose-600/90 hover:bg-rose-600 text-white shadow-sm transition"
+                                                    title="এই ছবিটি রিমুভ করুন"
+                                                >
+                                                    <X className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                            <div className="p-2 bg-slate-900 border-t border-slate-800/80">
+                                                <div className="text-[11px] text-white font-medium truncate" title={img.name}>
+                                                    {img.name}
+                                                </div>
+                                                <div className="text-[10px] text-slate-400 font-mono">
+                                                    {img.size}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Process Button */}
+                                <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 p-4 bg-slate-950/40 rounded-xl border border-slate-800">
+                                    <div className="text-xs text-slate-400">
+                                        Gemini Vision সবকটি পাতা ক্রমানুসারে পড়ে লিখিত ও নৈর্ব্যক্তিক প্রশ্ন এবং সমাধান স্ট্রাকচার্ড করবে।
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={handleImageSubmit}
+                                        disabled={loading || selectedImages.length === 0}
+                                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-semibold transition shadow-lg shadow-indigo-600/30 disabled:opacity-50 shrink-0"
+                                    >
+                                        <Sparkles className="w-4 h-4 text-amber-300" />
+                                        <span>
+                                            {loading
+                                                ? `Gemini দিয়ে বিশ্লেষণ চলছে (${selectedImages.length}টি ছবি)...`
+                                                : `Gemini Vision দিয়ে ${selectedImages.length}টি ছবি একসাথে বিশ্লেষণ করুন`}
+                                        </span>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 

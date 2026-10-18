@@ -4,6 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\Subject;
 use App\Models\User;
+use App\Services\QuestionService;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class QuestionManagementTest extends TestCase
@@ -123,5 +126,45 @@ class QuestionManagementTest extends TestCase
             'exam_name' => '43rd BCS (IT)',
             'year' => '2021',
         ]);
+    }
+
+    public function test_authenticated_user_can_upload_multiple_images_for_extraction(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+
+        $mockService = $this->createMock(QuestionService::class);
+        $mockService->expects($this->once())
+            ->method('extractFromMultipleImages')
+            ->willReturn([
+                [
+                    'type' => 'mcq',
+                    'question_text' => 'Sample multi-image question?',
+                    'options' => ['A' => '1', 'B' => '2', 'C' => '3', 'D' => '4'],
+                    'correct_option' => 'A',
+                    'explanation' => 'Exp',
+                    'subject_name' => 'DBMS',
+                    'topic_name' => 'SQL',
+                    'difficulty' => 'easy',
+                ],
+            ]);
+
+        $this->app->instance(QuestionService::class, $mockService);
+
+        $file1 = UploadedFile::fake()->image('page1.jpg');
+        $file2 = UploadedFile::fake()->image('page2.jpg');
+
+        $response = $this->actingAs($user)->post(route('questions.extract-image'), [
+            'images' => [$file1, $file2],
+            'exam_name' => '44th BCS',
+            'year' => '2022',
+        ]);
+
+        $response->assertOk();
+        $response->assertJson([
+            'success' => true,
+            'count' => 1,
+        ]);
+        $response->assertJsonStructure(['image_urls', 'questions']);
     }
 }

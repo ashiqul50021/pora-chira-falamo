@@ -123,26 +123,31 @@ class GeminiService
     }
 
     /**
-     * Extract questions or content from an image with a custom prompt.
+     * Extract questions or content from multiple images with a custom prompt.
      *
+     * @param  array<int, array{data: string, mime_type: string}>  $imagesData
      * @return array<string, mixed>|array<int, mixed>|string
      */
-    public function extractFromImage(string $imageBase64, string $mimeType, string $prompt, bool $jsonResponse = true): array|string
+    public function extractFromMultipleImages(array $imagesData, string $prompt, bool $jsonResponse = true): array|string
     {
         $this->ensureConfigured();
+
+        $parts = [];
+        foreach ($imagesData as $img) {
+            $parts[] = [
+                'inline_data' => [
+                    'mime_type' => $img['mime_type'],
+                    'data' => $img['data'],
+                ],
+            ];
+        }
+
+        $parts[] = ['text' => $prompt];
 
         $payload = [
             'contents' => [
                 [
-                    'parts' => [
-                        [
-                            'inline_data' => [
-                                'mime_type' => $mimeType,
-                                'data' => $imageBase64,
-                            ],
-                        ],
-                        ['text' => $prompt],
-                    ],
+                    'parts' => $parts,
                 ],
             ],
         ];
@@ -164,6 +169,20 @@ class GeminiService
         }
 
         return $rawText;
+    }
+
+    /**
+     * Extract questions or content from an image with a custom prompt.
+     *
+     * @return array<string, mixed>|array<int, mixed>|string
+     */
+    public function extractFromImage(string $imageBase64, string $mimeType, string $prompt, bool $jsonResponse = true): array|string
+    {
+        return $this->extractFromMultipleImages(
+            [['data' => $imageBase64, 'mime_type' => $mimeType]],
+            $prompt,
+            $jsonResponse
+        );
     }
 
     /**
