@@ -27,6 +27,8 @@ class Question extends Model
         'written_answer',
         'explanation',
         'difficulty',
+        'exam_name',
+        'year',
         'source',
     ];
 

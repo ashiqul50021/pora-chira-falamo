@@ -219,6 +219,14 @@ export default function Index({ questions, subjects, filters }) {
                                                 {q.topic.name}
                                             </span>
                                         )}
+                                        {(q.exam_name || q.year) && (
+                                            <span className="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-semibold flex items-center gap-1">
+                                                <span>🏛</span>
+                                                <span>
+                                                    {q.exam_name || 'বিগত পরীক্ষা'} {q.year ? `(${q.year})` : ''}
+                                                </span>
+                                            </span>
+                                        )}
                                         <span className="px-2 py-0.5 rounded bg-slate-700 text-slate-300 uppercase text-[10px] font-semibold">
                                             {q.difficulty}
                                         </span>

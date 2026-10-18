@@ -32,6 +32,7 @@ Analyze the provided text or image carefully. Questions can be EITHER:
 
 For each question, automatically detect whether it is "mcq" or "written".
 If code is part of the problem statement, isolate it in `code_snippet`.
+Check if any Competitive Exam name (e.g., "43rd BCS", "Sonali Bank Senior Officer IT", "BPSC Assistant Programmer", "Combined 8 Banks IT Officer", "Pubali Bank", "Agrani Bank", etc.) and Year (e.g., "2023", "2022", "2021") are mentioned in the question paper, header, watermark, or text.
 Map the subject and topic to the closest match from the following available IT subjects and topics:
 - {$subjectsList}
 
@@ -40,6 +41,8 @@ Return a valid JSON array of objects following this schema:
   {
     "type": "mcq or written",
     "marks": 1 for mcq (or 5, 10 for written based on difficulty/length),
+    "exam_name": "Exam name if mentioned or inferred, else null",
+    "year": "Exam year if mentioned or inferred (e.g., 2023), else null",
     "question_text": "Clean question statement without options or code",
     "code_snippet": "Optional code snippet from question statement, else null",
     "options": {
@@ -65,13 +68,30 @@ PROMPT;
      *
      * @return array<int, array<string, mixed>>
      */
-    public function extractFromText(string $rawText): array
+    public function extractFromText(string $rawText, ?string $defaultExam = null, ?string $defaultYear = null): array
     {
-        $prompt = $this->getExtractionPrompt()."\n\nHere is the raw text to extract questions from (both MCQ and Written):\n\"\"\"\n{$rawText}\n\"\"\"";
+        $context = '';
+        if ($defaultExam || $defaultYear) {
+            $context = "\nNote: User specified this exam is \"{$defaultExam}\" and year is \"{$defaultYear}\". Assign these if questions do not state otherwise.";
+        }
+
+        $prompt = $this->getExtractionPrompt()."{$context}\n\nHere is the raw text to extract questions from (both MCQ and Written):\n\"\"\"\n{$rawText}\n\"\"\"";
 
         $result = $this->gemini->generateJson($prompt);
+        $questions = $this->normalizeQuestionsResult($result);
 
-        return $this->normalizeQuestionsResult($result);
+        if ($defaultExam || $defaultYear) {
+            foreach ($questions as &$q) {
+                if (empty($q['exam_name']) && $defaultExam) {
+                    $q['exam_name'] = $defaultExam;
+                }
+                if (empty($q['year']) && $defaultYear) {
+                    $q['year'] = $defaultYear;
+                }
+            }
+        }
+
+        return $questions;
     }
 
     /**
@@ -79,12 +99,17 @@ PROMPT;
      *
      * @return array<int, array<string, mixed>>
      */
-    public function extractFromImage(UploadedFile $image): array
+    public function extractFromImage(UploadedFile $image, ?string $defaultExam = null, ?string $defaultYear = null): array
     {
         $base64 = base64_encode(file_get_contents($image->getRealPath()));
         $mimeType = $image->getMimeType() ?: 'image/jpeg';
 
-        $prompt = $this->getExtractionPrompt()."\n\nExtract all questions (both MCQ and Written) shown in this exam paper or book page.";
+        $context = '';
+        if ($defaultExam || $defaultYear) {
+            $context = "\nNote: User specified this exam is \"{$defaultExam}\" and year is \"{$defaultYear}\". Assign these if not stated otherwise.";
+        }
+
+        $prompt = $this->getExtractionPrompt()."{$context}\n\nExtract all questions (both MCQ and Written) shown in this exam paper or book page.";
 
         $result = $this->gemini->extractFromImage($base64, $mimeType, $prompt, true);
 
@@ -92,7 +117,20 @@ PROMPT;
             throw new RuntimeException('Gemini did not return an array from the image.');
         }
 
-        return $this->normalizeQuestionsResult($result);
+        $questions = $this->normalizeQuestionsResult($result);
+
+        if ($defaultExam || $defaultYear) {
+            foreach ($questions as &$q) {
+                if (empty($q['exam_name']) && $defaultExam) {
+                    $q['exam_name'] = $defaultExam;
+                }
+                if (empty($q['year']) && $defaultYear) {
+                    $q['year'] = $defaultYear;
+                }
+            }
+        }
+
+        return $questions;
     }
 
     /**
@@ -153,6 +191,8 @@ PROMPT;
         $correctOption = $type === 'mcq' && ! empty($data['correct_option']) ? strtoupper(trim((string) $data['correct_option'])) : null;
         $writtenAnswer = $type === 'written' ? ($data['written_answer'] ?? $data['explanation'] ?? null) : null;
         $marks = (int) ($data['marks'] ?? ($type === 'written' ? 5 : 1));
+        $examName = ! empty($data['exam_name']) ? trim((string) $data['exam_name']) : null;
+        $year = ! empty($data['year']) ? trim((string) $data['year']) : null;
 
         return Question::create([
             'user_id' => $userId,
@@ -160,6 +200,8 @@ PROMPT;
             'topic_id' => $topic?->id,
             'type' => $type,
             'marks' => $marks,
+            'exam_name' => $examName,
+            'year' => $year,
             'question_text' => $data['question_text'] ?? '',
             'code_snippet' => $data['code_snippet'] ?? null,
             'image_path' => $data['image_path'] ?? null,

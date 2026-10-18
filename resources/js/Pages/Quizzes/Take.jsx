@@ -121,9 +121,16 @@ export default function Take({ quiz }) {
                     {currentQuestion ? (
                         <div className="p-6 sm:p-8 rounded-2xl bg-slate-800/90 border border-slate-700 shadow-xl mb-6">
                             <div className="flex justify-between items-center text-xs text-slate-400 mb-4 pb-2 border-b border-slate-700/60">
-                                <span>
-                                    প্রশ্ন <strong className="text-white text-sm">#{currentIndex + 1}</strong> / {questions.length}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                    <span>
+                                        প্রশ্ন <strong className="text-white text-sm">#{currentIndex + 1}</strong> / {questions.length}
+                                    </span>
+                                    {(currentQuestion.exam_name || currentQuestion.year) && (
+                                        <span className="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-semibold">
+                                            🏛 {currentQuestion.exam_name} {currentQuestion.year ? `(${currentQuestion.year})` : ''}
+                                        </span>
+                                    )}
+                                </div>
                                 {answers[currentQuestion.id] && (
                                     <button
                                         onClick={() => handleClearAnswer(currentQuestion.id)}

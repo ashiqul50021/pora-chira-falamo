@@ -28,6 +28,8 @@ export default function Upload({ subjects }) {
 
     // Form states
     const [rawText, setRawText] = useState('');
+    const [uploadExamName, setUploadExamName] = useState('');
+    const [uploadYear, setUploadYear] = useState('');
     const [generateTopic, setGenerateTopic] = useState('Database Indexing & B-Trees');
     const [generateCount, setGenerateCount] = useState(3);
     const [generateDifficulty, setGenerateDifficulty] = useState('medium');
@@ -42,6 +44,8 @@ export default function Upload({ subjects }) {
 
         const formData = new FormData();
         formData.append('image', file);
+        if (uploadExamName.trim()) formData.append('exam_name', uploadExamName.trim());
+        if (uploadYear.trim()) formData.append('year', uploadYear.trim());
 
         try {
             const res = await axios.post(route('questions.extract-image'), formData, {
@@ -69,6 +73,8 @@ export default function Upload({ subjects }) {
         try {
             const res = await axios.post(route('questions.extract-text'), {
                 text: rawText,
+                exam_name: uploadExamName.trim() || undefined,
+                year: uploadYear.trim() || undefined,
             });
 
             if (res.data.success) {
@@ -211,30 +217,86 @@ export default function Upload({ subjects }) {
 
                 {/* Tab 1: Image Upload */}
                 {activeTab === 'image' && (
-                    <div className="border border-dashed border-slate-700 hover:border-slate-600 rounded-xl p-8 text-center bg-slate-900/40 transition">
-                        <UploadCloud className="w-10 h-10 text-slate-400 mx-auto mb-2.5" />
-                        <h4 className="text-sm font-semibold text-white mb-1">
-                            প্রশ্নপত্র বা বইয়ের পাতার ছবি ড্রপ করুন
-                        </h4>
-                        <p className="text-xs text-slate-400 max-w-md mx-auto mb-4">
-                            PNG, JPG, JPEG ফরম্যাট সমর্থিত। Gemini Vision স্বয়ংক্রিয়ভাবে প্রশ্ন, কোড ও অপশনসমূহ ডিটেক্ট করবে।
-                        </p>
-                        <label className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 cursor-pointer transition">
-                            <span>কম্পিউটার থেকে ছবি ব্রাউজ করুন</span>
-                            <input
-                                type="file"
-                                accept="image/*"
-                                onChange={handleImageSubmit}
-                                disabled={loading}
-                                className="hidden"
-                            />
-                        </label>
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div className="sm:col-span-2">
+                                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                                    পরীক্ষার নাম (ঐচ্ছিক - Gemini ছবি থেকেও বুঝে নিবে):
+                                </label>
+                                <input
+                                    type="text"
+                                    value={uploadExamName}
+                                    onChange={(e) => setUploadExamName(e.target.value)}
+                                    placeholder="যেমন: 43rd BCS, Sonali Bank IT Officer, BPSC AP"
+                                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-indigo-500"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                                    পরীক্ষার সাল (ঐচ্ছিক):
+                                </label>
+                                <input
+                                    type="text"
+                                    value={uploadYear}
+                                    onChange={(e) => setUploadYear(e.target.value)}
+                                    placeholder="যেমন: 2023, 2022"
+                                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-indigo-500"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="border border-dashed border-slate-700 hover:border-slate-600 rounded-xl p-8 text-center bg-slate-900/40 transition">
+                            <UploadCloud className="w-10 h-10 text-slate-400 mx-auto mb-2.5" />
+                            <h4 className="text-sm font-semibold text-white mb-1">
+                                প্রশ্নপত্র বা বইয়ের পাতার ছবি ড্রপ করুন
+                            </h4>
+                            <p className="text-xs text-slate-400 max-w-md mx-auto mb-4">
+                                PNG, JPG, JPEG ফরম্যাট সমর্থিত। Gemini Vision স্বয়ংক্রিয়ভাবে পরীক্ষার নাম, সাল, প্রশ্ন ও সলিউশন ডিটেক্ট করবে।
+                            </p>
+                            <label className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 cursor-pointer transition">
+                                <span>কম্পিউটার থেকে ছবি ব্রাউজ করুন</span>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleImageSubmit}
+                                    disabled={loading}
+                                    className="hidden"
+                                />
+                            </label>
+                        </div>
                     </div>
                 )}
 
                 {/* Tab 2: Text Paste */}
                 {activeTab === 'text' && (
                     <form onSubmit={handleTextSubmit} className="space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div className="sm:col-span-2">
+                                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                                    পরীক্ষার নাম (ঐচ্ছিক - Gemini টেক্সট থেকেও বুঝে নিবে):
+                                </label>
+                                <input
+                                    type="text"
+                                    value={uploadExamName}
+                                    onChange={(e) => setUploadExamName(e.target.value)}
+                                    placeholder="যেমন: 44th BCS IT, Combined 8 Banks IT"
+                                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-indigo-500"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                                    পরীক্ষার সাল (ঐচ্ছিক):
+                                </label>
+                                <input
+                                    type="text"
+                                    value={uploadYear}
+                                    onChange={(e) => setUploadYear(e.target.value)}
+                                    placeholder="যেমন: 2023, 2021"
+                                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-indigo-500"
+                                />
+                            </div>
+                        </div>
+
                         <div>
                             <label className="block text-xs font-semibold text-slate-300 mb-1">
                                 যেকোনো অগোছালো প্রশ্ন টেক্সট এখানে পেস্ট করুন:
@@ -243,7 +305,7 @@ export default function Upload({ subjects }) {
                                 rows={5}
                                 value={rawText}
                                 onChange={(e) => setRawText(e.target.value)}
-                                placeholder="1. What is an index in SQL? A) A pointer B) A table C) A key D) None. Correct: A. Explanation..."
+                                placeholder="1. What is an index in SQL? (43rd BCS 2021) A) A pointer B) A table C) A key D) None. Correct: A. Explanation..."
                                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 placeholder-slate-500 text-xs focus:outline-none focus:border-indigo-500 font-mono"
                                 required
                             />
@@ -424,6 +486,22 @@ export default function Upload({ subjects }) {
                                             onChange={(e) => handleQuestionChange(idx, 'topic_name', e.target.value)}
                                             placeholder="টপিক (Topic)"
                                             className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-xs text-cyan-300 font-medium focus:outline-none focus:border-cyan-500"
+                                        />
+                                        <input
+                                            type="text"
+                                            value={q.exam_name || ''}
+                                            onChange={(e) => handleQuestionChange(idx, 'exam_name', e.target.value)}
+                                            placeholder="পরীক্ষার নাম (e.g. 43rd BCS, Bank IT)"
+                                            className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-xs text-amber-300 font-medium focus:outline-none focus:border-amber-500"
+                                            title="যে পরীক্ষায় প্রশ্নটি এসেছিল"
+                                        />
+                                        <input
+                                            type="text"
+                                            value={q.year || ''}
+                                            onChange={(e) => handleQuestionChange(idx, 'year', e.target.value)}
+                                            placeholder="সাল (2023)"
+                                            className="w-20 px-2 py-1 rounded-lg bg-slate-900 border border-slate-700 text-xs text-amber-300 font-medium focus:outline-none focus:border-amber-500"
+                                            title="পরীক্ষার সাল"
                                         />
                                     </div>
 

@@ -263,6 +263,14 @@ export default function Practice({ questions, subjects, selectedSubject, selecte
                                     {currentQuestion.topic.name}
                                 </span>
                             )}
+                            {(currentQuestion.exam_name || currentQuestion.year) && (
+                                <span className="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-semibold flex items-center gap-1">
+                                    <span>🏛</span>
+                                    <span>
+                                        {currentQuestion.exam_name || 'বিগত পরীক্ষা'} {currentQuestion.year ? `(${currentQuestion.year})` : ''}
+                                    </span>
+                                </span>
+                            )}
                         </div>
                     </div>
 

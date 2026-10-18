@@ -88,4 +88,40 @@ class QuestionManagementTest extends TestCase
         $mcqResponse = $this->actingAs($user)->get(route('questions.index', ['type' => 'mcq']));
         $mcqResponse->assertOk();
     }
+
+    public function test_authenticated_user_can_save_question_with_exam_name_and_year(): void
+    {
+        $user = User::factory()->create();
+        $subject = Subject::firstOrCreate(['slug' => 'dld'], ['name' => 'Digital Logic Design & Computer Architecture']);
+
+        $response = $this->actingAs($user)->post(route('questions.store'), [
+            'questions' => [
+                [
+                    'type' => 'mcq',
+                    'question_text' => 'How many 3-to-8 line decoders with an enable input are needed to construct a 6-to-64 line decoder without using any other logic gate?',
+                    'options' => [
+                        'A' => '7',
+                        'B' => '8',
+                        'C' => '9',
+                        'D' => '10',
+                    ],
+                    'correct_option' => 'C',
+                    'explanation' => 'We need 8 decoders for the 64 outputs and 1 decoder to enable one of the 8 decoders. Total = 9.',
+                    'exam_name' => '43rd BCS (IT)',
+                    'year' => '2021',
+                    'subject_name' => $subject->name,
+                    'topic_name' => 'Combinational Circuits',
+                    'difficulty' => 'medium',
+                ],
+            ],
+            'source' => 'manual',
+        ]);
+
+        $response->assertRedirect(route('questions.index'));
+        $this->assertDatabaseHas('questions', [
+            'question_text' => 'How many 3-to-8 line decoders with an enable input are needed to construct a 6-to-64 line decoder without using any other logic gate?',
+            'exam_name' => '43rd BCS (IT)',
+            'year' => '2021',
+        ]);
+    }
 }

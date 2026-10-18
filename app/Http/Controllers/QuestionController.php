@@ -50,8 +50,14 @@ class QuestionController extends Controller
                 $q->where('question_text', 'LIKE', "%{$search}%")
                     ->orWhere('explanation', 'LIKE', "%{$search}%")
                     ->orWhere('written_answer', 'LIKE', "%{$search}%")
+                    ->orWhere('exam_name', 'LIKE', "%{$search}%")
+                    ->orWhere('year', 'LIKE', "%{$search}%")
                     ->orWhere('code_snippet', 'LIKE', "%{$search}%");
             });
+        }
+
+        if ($request->filled('exam_name')) {
+            $query->where('exam_name', 'LIKE', "%{$request->input('exam_name')}%");
         }
 
         $questions = $query->paginate(12)->withQueryString();
@@ -60,7 +66,7 @@ class QuestionController extends Controller
         return Inertia::render('Questions/Index', [
             'questions' => $questions,
             'subjects' => $subjects,
-            'filters' => $request->only(['subject_id', 'topic_id', 'difficulty', 'type', 'search']),
+            'filters' => $request->only(['subject_id', 'topic_id', 'difficulty', 'type', 'search', 'exam_name']),
         ]);
     }
 
@@ -83,10 +89,16 @@ class QuestionController extends Controller
     {
         $validated = $request->validate([
             'text' => 'required|string|min:10',
+            'exam_name' => 'nullable|string|max:150',
+            'year' => 'nullable|string|max:10',
         ]);
 
         try {
-            $questions = $this->questionService->extractFromText($validated['text']);
+            $questions = $this->questionService->extractFromText(
+                $validated['text'],
+                $validated['exam_name'] ?? null,
+                $validated['year'] ?? null
+            );
 
             return response()->json([
                 'success' => true,
@@ -106,13 +118,19 @@ class QuestionController extends Controller
      */
     public function extractImage(Request $request): JsonResponse
     {
-        $request->validate([
+        $validated = $request->validate([
             'image' => 'required|image|max:10240', // max 10MB
+            'exam_name' => 'nullable|string|max:150',
+            'year' => 'nullable|string|max:10',
         ]);
 
         try {
             $imageFile = $request->file('image');
-            $questions = $this->questionService->extractFromImage($imageFile);
+            $questions = $this->questionService->extractFromImage(
+                $imageFile,
+                $validated['exam_name'] ?? null,
+                $validated['year'] ?? null
+            );
 
             // Store image if user wants to keep a copy
             $storedPath = $imageFile->store('question-uploads', 'public');
@@ -181,6 +199,8 @@ class QuestionController extends Controller
             'questions.*.correct_option' => 'nullable|string',
             'questions.*.written_answer' => 'nullable|string',
             'questions.*.marks' => 'nullable|integer|min:1|max:100',
+            'questions.*.exam_name' => 'nullable|string|max:150',
+            'questions.*.year' => 'nullable|string|max:10',
             'questions.*.subject_name' => 'nullable|string',
             'questions.*.topic_name' => 'nullable|string',
             'questions.*.explanation' => 'nullable|string',
