@@ -100,6 +100,11 @@ class QuestionController extends Controller
                 $validated['year'] ?? null
             );
 
+            $duplicateChecked = $this->questionService->attachDuplicateStatus($questions);
+            if (! empty($duplicateChecked)) {
+                $questions = $duplicateChecked;
+            }
+
             return response()->json([
                 'success' => true,
                 'questions' => $questions,
@@ -161,6 +166,11 @@ class QuestionController extends Controller
                 $q['image_path'] = $primaryImageUrl;
             }
 
+            $duplicateChecked = $this->questionService->attachDuplicateStatus($questions);
+            if (! empty($duplicateChecked)) {
+                $questions = $duplicateChecked;
+            }
+
             return response()->json([
                 'success' => true,
                 'questions' => $questions,
@@ -194,6 +204,10 @@ class QuestionController extends Controller
 
         try {
             $questions = $this->questionService->generateQuestions($validated['topic'], $count, $difficulty, $type);
+            $duplicateChecked = $this->questionService->attachDuplicateStatus($questions);
+            if (! empty($duplicateChecked)) {
+                $questions = $duplicateChecked;
+            }
 
             return response()->json([
                 'success' => true,
@@ -206,6 +220,24 @@ class QuestionController extends Controller
                 'message' => 'Question generation failed: '.$e->getMessage(),
             ], 422);
         }
+    }
+
+    /**
+     * Check an array of questions for duplicates against the database and batch.
+     */
+    public function checkDuplicates(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'questions' => 'required|array',
+            'questions.*.question_text' => 'nullable|string',
+        ]);
+
+        $questions = $this->questionService->attachDuplicateStatus($validated['questions']);
+
+        return response()->json([
+            'success' => true,
+            'questions' => $questions,
+        ]);
     }
 
     /**
@@ -229,24 +261,39 @@ class QuestionController extends Controller
             'questions.*.code_snippet' => 'nullable|string',
             'questions.*.difficulty' => 'nullable|string|in:easy,medium,hard',
             'source' => 'nullable|string',
+            'skip_duplicates' => 'nullable|boolean',
         ]);
 
         $user = $request->user();
         $source = $validated['source'] ?? 'manual';
+        $skipDuplicates = (bool) ($validated['skip_duplicates'] ?? false);
         $savedCount = 0;
+        $skippedCount = 0;
 
         foreach ($validated['questions'] as $qData) {
+            $questionText = $qData['question_text'] ?? '';
+            if ($skipDuplicates && $this->questionService->findExistingQuestion($questionText)) {
+                $skippedCount++;
+
+                continue;
+            }
+
             $this->questionService->saveQuestion($qData, $user?->id, $source);
             $savedCount++;
         }
 
         // Update streak & practice count
-        if ($user) {
+        if ($user && $savedCount > 0) {
             $this->streakService->recordQuestionPracticed($user, $savedCount);
         }
 
+        $message = "{$savedCount} টি প্রশ্ন সফলভাবে ডাটাবেসে সেভ করা হয়েছে!";
+        if ($skippedCount > 0) {
+            $message .= " ({$skippedCount} টি ডুপ্লিকেট প্রশ্ন স্কিপ করা হয়েছে)";
+        }
+
         return redirect()->route('questions.index')
-            ->with('success', "{$savedCount} টি প্রশ্ন সফলভাবে ডাটাবেসে সেভ করা হয়েছে!");
+            ->with('success', $message);
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Question;
 use App\Models\Subject;
 use App\Models\User;
 use App\Services\QuestionService;
@@ -166,5 +167,81 @@ class QuestionManagementTest extends TestCase
             'count' => 1,
         ]);
         $response->assertJsonStructure(['image_urls', 'questions']);
+    }
+
+    public function test_check_duplicates_detects_database_and_batch_duplicates(): void
+    {
+        $user = User::factory()->create();
+        $subject = Subject::firstOrCreate(['slug' => 'dbms'], ['name' => 'Database Management Systems']);
+
+        Question::factory()->create([
+            'subject_id' => $subject->id,
+            'question_text' => 'What is third normal form (3NF)?',
+        ]);
+
+        $response = $this->actingAs($user)->postJson(route('questions.check-duplicates'), [
+            'questions' => [
+                [
+                    'question_text' => '1. What is third normal form (3NF)?',
+                ],
+                [
+                    'question_text' => 'What is B-tree indexing?',
+                ],
+                [
+                    'question_text' => 'What is B-tree indexing?',
+                ],
+            ],
+        ]);
+
+        $response->assertOk();
+        $data = $response->json('questions');
+
+        // First is in database
+        $this->assertTrue($data[0]['is_duplicate']);
+        $this->assertEquals('database', $data[0]['duplicate_reason']);
+        $this->assertNotNull($data[0]['existing_question']);
+
+        // Second is unique
+        $this->assertFalse($data[1]['is_duplicate']);
+
+        // Third is batch duplicate of second
+        $this->assertTrue($data[2]['is_duplicate']);
+        $this->assertEquals('batch', $data[2]['duplicate_reason']);
+    }
+
+    public function test_store_can_skip_duplicates_when_skip_duplicates_is_enabled(): void
+    {
+        $user = User::factory()->create();
+        $subject = Subject::firstOrCreate(['slug' => 'algo'], ['name' => 'Data Structures & Algorithms']);
+
+        Question::factory()->create([
+            'subject_id' => $subject->id,
+            'question_text' => 'Explain Dijkstra shortest path algorithm.',
+        ]);
+
+        $initialCount = Question::count();
+
+        $response = $this->actingAs($user)->post(route('questions.store'), [
+            'questions' => [
+                [
+                    'type' => 'written',
+                    'question_text' => 'Explain Dijkstra shortest path algorithm.',
+                    'subject_name' => $subject->name,
+                ],
+                [
+                    'type' => 'written',
+                    'question_text' => 'Explain Bellman-Ford algorithm.',
+                    'subject_name' => $subject->name,
+                ],
+            ],
+            'skip_duplicates' => true,
+        ]);
+
+        $response->assertRedirect(route('questions.index'));
+        $response->assertSessionHas('success');
+        $this->assertStringContainsString('ডুপ্লিকেট প্রশ্ন স্কিপ করা হয়েছে', session('success'));
+
+        // Only 1 new question should be saved
+        $this->assertEquals($initialCount + 1, Question::count());
     }
 }

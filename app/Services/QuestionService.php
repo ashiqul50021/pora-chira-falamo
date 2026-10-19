@@ -259,4 +259,126 @@ PROMPT;
 
         return array_values($result);
     }
+
+    /**
+     * Normalize question text for reliable duplicate detection.
+     */
+    public function normalizeText(string $text): string
+    {
+        // Remove leading numbering like "1.", "1)", "Q1:", "(1)", "১.", "১)"
+        $text = preg_replace('/^(?:Q\d+[:.]?|\(?[\d\x{09E6}-\x{09EF}]+\)?[.:\-\s]+)/iu', '', trim($text));
+        // Remove punctuation at the end: ?, ।, ., !, :
+        $text = preg_replace('/[?.!।:\s]+$/u', '', $text);
+        // Convert multiple whitespaces/newlines to single space
+        $text = preg_replace('/\s+/u', ' ', $text);
+
+        return mb_strtolower(trim($text), 'UTF-8');
+    }
+
+    /**
+     * Find an existing question in the database matching the given text.
+     */
+    public function findExistingQuestion(string $questionText): ?Question
+    {
+        $cleanText = trim($questionText);
+        if ($cleanText === '') {
+            return null;
+        }
+
+        // Direct exact match
+        $match = Question::with('subject:id,name')
+            ->where('question_text', $cleanText)
+            ->first();
+
+        if ($match) {
+            return $match;
+        }
+
+        // Normalized match
+        $normalized = $this->normalizeText($cleanText);
+        if (mb_strlen($normalized) >= 10) {
+            $prefix = mb_substr($normalized, 0, 35);
+            $candidates = Question::with('subject:id,name')
+                ->where('question_text', 'LIKE', "%{$prefix}%")
+                ->limit(15)
+                ->get();
+
+            foreach ($candidates as $candidate) {
+                if ($this->normalizeText($candidate->question_text) === $normalized) {
+                    return $candidate;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Check a list of questions for duplicates against the database and within the batch itself.
+     *
+     * @param  array<int, array<string, mixed>>  $questions
+     * @return array<int, array<string, mixed>>
+     */
+    public function attachDuplicateStatus(array $questions): array
+    {
+        $seenBatchTexts = [];
+
+        // Pre-fetch exact matches in bulk for optimal DB performance
+        $rawTexts = array_values(array_filter(array_map(
+            fn ($q) => trim((string) ($q['question_text'] ?? '')),
+            $questions
+        )));
+
+        $existingExactMap = [];
+        if (! empty($rawTexts)) {
+            $exactMatches = Question::with('subject:id,name')
+                ->whereIn('question_text', $rawTexts)
+                ->get();
+
+            foreach ($exactMatches as $match) {
+                $norm = $this->normalizeText($match->question_text);
+                $existingExactMap[$norm] = $match;
+            }
+        }
+
+        foreach ($questions as &$q) {
+            $text = trim((string) ($q['question_text'] ?? ''));
+            $normalized = $this->normalizeText($text);
+
+            $isDuplicate = false;
+            $duplicateReason = null;
+            $existingQuestionInfo = null;
+
+            if ($text !== '') {
+                // Check if already in the current batch
+                if (isset($seenBatchTexts[$normalized])) {
+                    $isDuplicate = true;
+                    $duplicateReason = 'batch';
+                } else {
+                    // Check if exists in DB (first from bulk map, then fallback to normalized search)
+                    $existing = $existingExactMap[$normalized] ?? $this->findExistingQuestion($text);
+
+                    if ($existing) {
+                        $isDuplicate = true;
+                        $duplicateReason = 'database';
+                        $existingQuestionInfo = [
+                            'id' => $existing->id,
+                            'question_text' => $existing->question_text,
+                            'subject_name' => $existing->subject?->name,
+                            'exam_name' => $existing->exam_name,
+                            'year' => $existing->year,
+                        ];
+                    }
+                }
+
+                $seenBatchTexts[$normalized] = true;
+            }
+
+            $q['is_duplicate'] = $isDuplicate;
+            $q['duplicate_reason'] = $duplicateReason;
+            $q['existing_question'] = $existingQuestionInfo;
+        }
+
+        return $questions;
+    }
 }

@@ -19,7 +19,8 @@ import {
     Layers,
     Plus,
     X,
-    Images
+    Images,
+    AlertTriangle,
 } from 'lucide-react';
 
 export default function Upload({ subjects }) {
@@ -31,6 +32,8 @@ export default function Upload({ subjects }) {
     const [uploadedImageUrls, setUploadedImageUrls] = useState([]);
     const [selectedImages, setSelectedImages] = useState([]);
     const [isDragging, setIsDragging] = useState(false);
+    const [skipDuplicatesOnSave, setSkipDuplicatesOnSave] = useState(true);
+    const [checkingDuplicates, setCheckingDuplicates] = useState(false);
 
     // Form states
     const [rawText, setRawText] = useState('');
@@ -241,14 +244,39 @@ export default function Upload({ subjects }) {
         setExtractedQuestions(extractedQuestions.filter((_, i) => i !== index));
     };
 
+    const handleRemoveDuplicates = () => {
+        setExtractedQuestions(extractedQuestions.filter((q) => !q.is_duplicate));
+    };
+
+    const handleCheckDuplicates = async (customQuestions = null) => {
+        const toCheck = customQuestions || extractedQuestions;
+        if (toCheck.length === 0) return;
+        setCheckingDuplicates(true);
+        try {
+            const res = await axios.post(route('questions.check-duplicates'), {
+                questions: toCheck,
+            });
+            if (res.data.success) {
+                setExtractedQuestions(res.data.questions);
+            }
+        } catch (err) {
+            console.error('Failed to check duplicates', err);
+        } finally {
+            setCheckingDuplicates(false);
+        }
+    };
+
     const handleSaveAll = () => {
         if (extractedQuestions.length === 0) return;
 
         router.post(route('questions.store'), {
             questions: extractedQuestions,
             source: activeTab === 'image' ? 'gemini_image' : activeTab === 'text' ? 'gemini_text' : 'gemini_generated',
+            skip_duplicates: skipDuplicatesOnSave,
         });
     };
+
+    const duplicateCount = extractedQuestions.filter((q) => q.is_duplicate).length;
 
     return (
         <AuthenticatedLayout
@@ -264,13 +292,25 @@ export default function Upload({ subjects }) {
                     </div>
 
                     {extractedQuestions.length > 0 && (
-                        <button
-                            onClick={handleSaveAll}
-                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm transition"
-                        >
-                            <Save className="w-4 h-4" />
-                            <span>সবগুলো ডাটাবেসে সেভ করুন ({extractedQuestions.length})</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                            {duplicateCount > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={handleRemoveDuplicates}
+                                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/40 text-xs font-semibold transition"
+                                >
+                                    <Trash2 className="w-3.5 h-3.5 text-amber-400" />
+                                    <span>ডুপ্লিকেট বাদ দিন ({duplicateCount})</span>
+                                </button>
+                            )}
+                            <button
+                                onClick={handleSaveAll}
+                                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm transition"
+                            >
+                                <Save className="w-4 h-4" />
+                                <span>সবগুলো ডাটাবেসে সেভ করুন ({extractedQuestions.length})</span>
+                            </button>
+                        </div>
                     )}
                 </div>
             }
@@ -652,7 +692,7 @@ export default function Upload({ subjects }) {
             {/* Extracted Questions Review Cards */}
             {extractedQuestions.length > 0 && (
                 <div className="space-y-5">
-                    <div className="flex justify-between items-center">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <div>
                             <h3 className="text-base font-bold text-white flex items-center gap-2">
                                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
@@ -663,20 +703,87 @@ export default function Upload({ subjects }) {
                             </p>
                         </div>
 
-                        <button
-                            onClick={handleSaveAll}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-sm"
-                        >
-                            <Save className="w-3.5 h-3.5" />
-                            <span>সবগুলো সেভ করুন</span>
-                        </button>
+                        <div className="flex flex-wrap items-center gap-2">
+                            {duplicateCount > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={handleRemoveDuplicates}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/40 text-xs font-semibold transition"
+                                >
+                                    <Trash2 className="w-3.5 h-3.5 text-amber-400" />
+                                    <span>ডুপ্লিকেট বাদ দিন ({duplicateCount})</span>
+                                </button>
+                            )}
+                            <button
+                                type="button"
+                                disabled={checkingDuplicates}
+                                onClick={() => handleCheckDuplicates()}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-medium transition"
+                                title="ডাটাবেসের সাথে ডুপ্লিকেট আবার যাচাই করুন"
+                            >
+                                <RefreshCw className={`w-3.5 h-3.5 ${checkingDuplicates ? 'animate-spin' : ''}`} />
+                                <span>যাচাই</span>
+                            </button>
+                            <button
+                                onClick={handleSaveAll}
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-sm"
+                            >
+                                <Save className="w-3.5 h-3.5" />
+                                <span>সবগুলো সেভ করুন</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Duplicate Warning Banner */}
+                    {duplicateCount > 0 && (
+                        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+                            <div className="flex items-start gap-3">
+                                <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                                <div>
+                                    <div className="text-xs sm:text-sm font-bold text-amber-300">
+                                        {duplicateCount}টি সম্ভাব্য ডুপ্লিকেট প্রশ্ন চিহ্নিত হয়েছে!
+                                    </div>
+                                    <div className="text-[11px] sm:text-xs text-amber-200/80 mt-0.5">
+                                        এই প্রশ্নগুলো ইতিমধ্যে ডাটাবেসে অথবা বর্তমান এক্সট্র্যাক্ট করা তালিকায় বিদ্যমান।
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handleRemoveDuplicates}
+                                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold shadow-sm transition"
+                                >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <span>সব ডুপ্লিকেট বাদ দিন ({duplicateCount})</span>
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-slate-400">
+                        <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                                type="checkbox"
+                                checked={skipDuplicatesOnSave}
+                                onChange={(e) => setSkipDuplicatesOnSave(e.target.checked)}
+                                className="rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-0"
+                            />
+                            <span className="text-slate-300">সেভ করার সময় ডুপ্লিকেট প্রশ্ন স্বয়ংক্রিয়ভাবে স্কিপ করুন (প্রস্তাবিত)</span>
+                        </label>
+                        <span>মোট: {extractedQuestions.length}টি প্রশ্ন</span>
                     </div>
 
                     <div className="space-y-4">
                         {extractedQuestions.map((q, idx) => (
                             <div
                                 key={idx}
-                                className="p-5 rounded-xl bg-[#0f172a] border border-slate-800 shadow-sm"
+                                className={`p-5 rounded-xl border shadow-sm transition ${
+                                    q.is_duplicate
+                                        ? 'bg-[#181309] border-amber-500/40 ring-1 ring-amber-500/20'
+                                        : 'bg-[#0f172a] border-slate-800'
+                                }`}
                             >
                                 <div className="flex justify-between items-start gap-3 mb-3">
                                     <div className="flex flex-wrap items-center gap-2">
@@ -738,6 +845,17 @@ export default function Upload({ subjects }) {
                                             className="w-20 px-2 py-1 rounded-lg bg-slate-900 border border-slate-700 text-xs text-amber-300 font-medium focus:outline-none focus:border-amber-500"
                                             title="পরীক্ষার সাল"
                                         />
+
+                                        {q.is_duplicate && (
+                                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs font-semibold">
+                                                <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                                <span>
+                                                    {q.duplicate_reason === 'batch'
+                                                        ? 'তালিকায় ডুপ্লিকেট'
+                                                        : `ডাটাবেসে বিদ্যমান${q.existing_question?.id ? ` (#${q.existing_question.id})` : ''}`}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <button
@@ -749,6 +867,37 @@ export default function Upload({ subjects }) {
                                         <Trash2 className="w-4 h-4" />
                                     </button>
                                 </div>
+
+                                {/* Duplicate Details Banner */}
+                                {q.is_duplicate && (
+                                    <div className="mb-3 p-3 rounded-lg bg-amber-950/40 border border-amber-500/25 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                                        <div className="text-amber-200/90 text-[11px] leading-relaxed">
+                                            <span className="font-bold text-amber-300">
+                                                {q.duplicate_reason === 'batch' ? 'সতর্কতা:' : 'ডাটাবেসে অনুরূপ প্রশ্ন রয়েছে:'}
+                                            </span>{' '}
+                                            {q.existing_question ? (
+                                                <>
+                                                    <span className="text-slate-200 font-medium">"{q.existing_question.question_text}"</span>
+                                                    {q.existing_question.subject_name && (
+                                                        <span className="ml-1 text-indigo-300 font-mono text-[10px]">
+                                                            [{q.existing_question.subject_name}]
+                                                        </span>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <span className="text-slate-300">এই প্রশ্নটি বর্তমান আপলোড তালিকায় একাধিকবার এসেছে।</span>
+                                            )}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRemoveQuestion(idx)}
+                                            className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-[11px] font-semibold transition"
+                                        >
+                                            <Trash2 className="w-3 h-3 text-amber-400" />
+                                            <span>বাদ দিন</span>
+                                        </button>
+                                    </div>
+                                )}
 
                                 {/* Question Text */}
                                 <div className="mb-3">
