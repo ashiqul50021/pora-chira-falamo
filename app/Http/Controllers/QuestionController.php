@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PracticeLog;
 use App\Models\Question;
 use App\Models\Subject;
 use App\Models\Topic;
@@ -333,7 +334,42 @@ class QuestionController extends Controller
     public function recordPractice(Request $request): JsonResponse
     {
         $user = $request->user();
-        $goal = $this->streakService->recordQuestionPracticed($user, 1);
+
+        $validated = $request->validate([
+            'question_id' => 'nullable|exists:questions,id',
+            'selected_option' => 'nullable|string|max:10',
+            'is_correct' => 'nullable|boolean',
+            'type' => 'nullable|string|in:mcq,written',
+        ]);
+
+        if (! empty($validated['question_id'])) {
+            // Check if there is a recent log within last 15 mins for the same question (e.g. self-evaluation after reveal)
+            $recentLog = PracticeLog::where('user_id', $user->id)
+                ->where('question_id', $validated['question_id'])
+                ->where('created_at', '>=', now()->subMinutes(15))
+                ->latest()
+                ->first();
+
+            if ($recentLog && array_key_exists('is_correct', $validated)) {
+                $recentLog->update([
+                    'is_correct' => (bool) $validated['is_correct'],
+                    'selected_option' => $validated['selected_option'] ?? $recentLog->selected_option,
+                    'type' => $validated['type'] ?? $recentLog->type,
+                ]);
+                $goal = $user->getTodayGoal();
+            } else {
+                PracticeLog::create([
+                    'user_id' => $user->id,
+                    'question_id' => $validated['question_id'],
+                    'selected_option' => $validated['selected_option'] ?? null,
+                    'is_correct' => (bool) ($validated['is_correct'] ?? false),
+                    'type' => $validated['type'] ?? 'mcq',
+                ]);
+                $goal = $this->streakService->recordQuestionPracticed($user, 1);
+            }
+        } else {
+            $goal = $this->streakService->recordQuestionPracticed($user, 1);
+        }
 
         return response()->json([
             'success' => true,

@@ -46,9 +46,14 @@ export default function Practice({ questions, subjects, selectedSubject, selecte
             setSessionScore((prev) => ({ ...prev, wrong: prev.wrong + 1 }));
         }
 
-        // Record practice activity towards daily streak & goal
+        // Record practice activity towards daily streak & goal with question details
         try {
-            await axios.post(route('questions.practice.record'));
+            await axios.post(route('questions.practice.record'), {
+                question_id: currentQuestion?.id,
+                selected_option: optionKey,
+                is_correct: isCorrect,
+                type: 'mcq',
+            });
         } catch (e) {
             console.error('Failed to update streak record', e);
         }
@@ -62,13 +67,18 @@ export default function Practice({ questions, subjects, selectedSubject, selecte
 
         // Record practice towards daily streak & goal
         try {
-            await axios.post(route('questions.practice.record'));
+            await axios.post(route('questions.practice.record'), {
+                question_id: currentQuestion?.id,
+                selected_option: null,
+                is_correct: false,
+                type: 'written',
+            });
         } catch (e) {
             console.error('Failed to update streak record', e);
         }
     };
 
-    const handleSelfEvaluation = (isSuccess) => {
+    const handleSelfEvaluation = async (isSuccess) => {
         if (selfEvaluated) return;
         setSelfEvaluated(true);
 
@@ -76,6 +86,17 @@ export default function Practice({ questions, subjects, selectedSubject, selecte
             setSessionScore((prev) => ({ ...prev, correct: prev.correct + 1 }));
         } else {
             setSessionScore((prev) => ({ ...prev, wrong: prev.wrong + 1 }));
+        }
+
+        try {
+            await axios.post(route('questions.practice.record'), {
+                question_id: currentQuestion?.id,
+                selected_option: null,
+                is_correct: isSuccess,
+                type: 'written',
+            });
+        } catch (e) {
+            console.error('Failed to update streak record', e);
         }
     };
 

@@ -42,6 +42,9 @@ class DashboardController extends Controller
         // 7-day activity sparkline
         $weeklyPerformance = $this->streakService->getWeeklyPerformance($user);
 
+        // Today's daily report with quick practice logs, activity, and performance scale
+        $dailyReport = $this->streakService->getDailyReport($user);
+
         return Inertia::render('Dashboard', [
             'streak' => $streak,
             'todayGoal' => $todayGoal,
@@ -51,6 +54,7 @@ class DashboardController extends Controller
             'recentQuestions' => $recentQuestions,
             'weeklyActivity' => $weeklyPerformance['daily_history'],
             'penaltyCount' => $streak->penalty_count,
+            'dailyReport' => $dailyReport,
         ]);
     }
 }

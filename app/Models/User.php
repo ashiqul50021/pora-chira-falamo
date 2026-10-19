@@ -74,6 +74,14 @@ class User extends Authenticatable
     }
 
     /**
+     * @return HasMany<PracticeLog, $this>
+     */
+    public function practiceLogs(): HasMany
+    {
+        return $this->hasMany(PracticeLog::class);
+    }
+
+    /**
      * Get or initialize user's study streak.
      */
     public function getOrCreateStreak(): StudyStreak
