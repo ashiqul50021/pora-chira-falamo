@@ -47,6 +47,8 @@ if ($zip->open($tmpZip) === true) {
         while (false !== ($file = readdir($dir))) {
             if ($file === '.' || $file === '..') continue;
             if ($file === '.env') continue;
+            if ($file === '.htaccess') continue;
+            if ($file === '.user.ini') continue;
             if ($file === 'storage' && realpath($dst) === realpath($targetDir)) continue;
 
             $srcFile = $src . '/' . $file;
