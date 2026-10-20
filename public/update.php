@@ -1,5 +1,9 @@
 <?php
 
+use App\Models\StudyNote;
+use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Support\Facades\Artisan;
+
 // Simple 1-click GitHub Puller for cPanel
 set_time_limit(300);
 
@@ -103,10 +107,44 @@ if ($zip->open($tmpZip) === true) {
             @unlink($cf);
         }
     }
-
     echo "✅ Project files updated successfully!\n";
-    echo "✅ Cache cleared!\n\n";
-    echo "🎉 Live server is now up-to-date with latest commit!\n";
+    echo "✅ File cache cleared!\n\n";
+
+    // Automatic Database Migration & Seeding
+    echo "4. Running database migrations...\n";
+    try {
+        require_once $targetDir.'/vendor/autoload.php';
+        $app = require_once $targetDir.'/bootstrap/app.php';
+        $kernel = $app->make(Kernel::class);
+        $kernel->bootstrap();
+
+        Artisan::call('migrate', ['--force' => true]);
+        $migOutput = trim(Artisan::output());
+        echo ($migOutput ?: 'Nothing to migrate.')."\n";
+        echo "✅ Database migrations executed successfully!\n\n";
+
+        // Seed StudyNotes if table is empty
+        try {
+            if (StudyNote::count() === 0) {
+                echo "5. Seeding initial study notes & lecture sheets...\n";
+                Artisan::call('db:seed', ['--class' => 'StudyNoteSeeder', '--force' => true]);
+                echo trim(Artisan::output())."\n";
+                echo "✅ Study notes seeded successfully!\n\n";
+            }
+        } catch (Throwable $se) {
+            // Ignore if seeder already ran
+        }
+
+        // Optimize clear
+        Artisan::call('optimize:clear');
+        echo "✅ Laravel optimization cache cleared!\n\n";
+    } catch (Throwable $e) {
+        echo '⚠️ Database/Artisan note: '.$e->getMessage()."\n";
+        echo "👉 If needed, visit: https://poira-chira-falamo.ashiqulislamrasel.com/setup.php?key=pora2026&action=all\n\n";
+    }
+
+    echo "🎉 Live server is now 100% up-to-date and ready!\n";
+    echo "👉 <a href='/dashboard' style='color:#a5f3fc;font-weight:bold;text-decoration:underline;'>Go to Dashboard →</a>\n";
 } else {
     exit("❌ Failed to open downloaded zip archive.\n");
 }

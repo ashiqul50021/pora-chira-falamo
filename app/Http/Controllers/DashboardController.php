@@ -46,12 +46,17 @@ class DashboardController extends Controller
         // Today's daily report with quick practice logs, activity, and performance scale
         $dailyReport = $this->streakService->getDailyReport($user);
 
-        // Featured study notes
-        $featuredNotes = StudyNote::with('subject')
-            ->where('is_published', true)
-            ->latest()
-            ->take(3)
-            ->get();
+        // Featured study notes (safe fallback if migration is pending)
+        $featuredNotes = [];
+        try {
+            $featuredNotes = StudyNote::with('subject')
+                ->where('is_published', true)
+                ->latest()
+                ->take(3)
+                ->get();
+        } catch (\Throwable $e) {
+            $featuredNotes = [];
+        }
 
         return Inertia::render('Dashboard', [
             'streak' => $streak,
