@@ -6,6 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\QuizController;
+use App\Http\Controllers\StudyNoteController;
 use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -40,6 +41,16 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{quiz}', [QuizController::class, 'show'])->name('show');
         Route::post('/{quiz}/submit', [QuizController::class, 'submit'])->name('submit');
         Route::get('/attempts/{attempt}', [QuizController::class, 'result'])->name('result');
+    });
+
+    // Theory, Docs & Study Notes (লেকচার শিট)
+    Route::prefix('notes')->name('notes.')->group(function () {
+        Route::get('/', [StudyNoteController::class, 'index'])->name('index');
+        Route::get('/create', [StudyNoteController::class, 'create'])->name('create');
+        Route::post('/generate-ai', [StudyNoteController::class, 'generateAi'])->name('generate-ai');
+        Route::post('/', [StudyNoteController::class, 'store'])->name('store');
+        Route::get('/{note:slug}', [StudyNoteController::class, 'show'])->name('show');
+        Route::delete('/{note}', [StudyNoteController::class, 'destroy'])->name('destroy');
     });
 
     // Weekly Analytics & AI Study Coach

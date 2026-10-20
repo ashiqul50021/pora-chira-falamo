@@ -62,7 +62,7 @@ export default function Index({ performance }) {
                 </div>
             }
         >
-            <Head title="উইকলি রিপোর্ট - IT Exam Prep" />
+            <Head title="ডেইলি ও উইকলি রিপোর্ট - IT Exam Prep" />
 
             {/* AI Advisor Box */}
             {aiAdvice && (

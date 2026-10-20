@@ -62,7 +62,7 @@ try {
         try {
             Artisan::call('storage:link');
             echo Artisan::output()."\n";
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             echo 'Storage link note: '.$e->getMessage()."\n\n";
         }
     }
@@ -76,7 +76,7 @@ try {
     }
 
     echo "🎉 SUCCESS: Everything completed successfully!\n";
-} catch (\Throwable $e) {
+} catch (Throwable $e) {
     echo "❌ ERROR ENCOUNTERED:\n".$e->getMessage()."\n\nTrace:\n".$e->getTraceAsString();
 }
 

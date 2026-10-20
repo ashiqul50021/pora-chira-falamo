@@ -55,7 +55,7 @@ export default function Result({ attempt }) {
                             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md transition"
                         >
                             <BarChart3 className="w-3.5 h-3.5" />
-                            <span>উইকলি রিপোর্ট</span>
+                            <span>ডেইলি ও উইকলি রিপোর্ট</span>
                         </Link>
                     </div>
                 </div>

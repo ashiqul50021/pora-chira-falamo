@@ -19,7 +19,8 @@ import {
     Sparkles,
     ShieldAlert,
     Target,
-    Users
+    Users,
+    Library
 } from 'lucide-react';
 
 export default function AuthenticatedLayout({ header, children }) {
@@ -38,6 +39,14 @@ export default function AuthenticatedLayout({ header, children }) {
                     href: route('dashboard'),
                     active: route().current('dashboard'),
                     icon: LayoutDashboard,
+                },
+                {
+                    name: 'লেকচার শিট ও নোটস',
+                    href: route('notes.index'),
+                    active: route().current('notes.*'),
+                    icon: Library,
+                    badge: 'থিওরি',
+                    badgeColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
                 },
                 {
                     name: 'কুইক প্র্যাকটিস',
@@ -77,7 +86,7 @@ export default function AuthenticatedLayout({ header, children }) {
             group: 'অ্যানালাইটিক্স',
             items: [
                 {
-                    name: 'উইকলি রিপোর্ট',
+                    name: 'ডেইলি ও উইকলি রিপোর্ট',
                     href: route('analytics.index'),
                     active: route().current('analytics.index'),
                     icon: BarChart3,

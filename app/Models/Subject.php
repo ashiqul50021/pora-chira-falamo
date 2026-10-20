@@ -42,4 +42,12 @@ class Subject extends Model
     {
         return $this->hasMany(Quiz::class);
     }
+
+    /**
+     * @return HasMany<StudyNote, $this>
+     */
+    public function studyNotes(): HasMany
+    {
+        return $this->hasMany(StudyNote::class);
+    }
 }

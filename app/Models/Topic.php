@@ -35,4 +35,12 @@ class Topic extends Model
     {
         return $this->hasMany(Question::class);
     }
+
+    /**
+     * @return HasMany<StudyNote, $this>
+     */
+    public function studyNotes(): HasMany
+    {
+        return $this->hasMany(StudyNote::class);
+    }
 }

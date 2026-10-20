@@ -24,6 +24,7 @@ import {
     XCircle,
     Award,
     Zap,
+    Library,
 } from 'lucide-react';
 
 export default function Dashboard({
@@ -36,6 +37,7 @@ export default function Dashboard({
     weeklyActivity,
     penaltyCount,
     dailyReport,
+    featuredNotes = [],
 }) {
     const [showGoalModal, setShowGoalModal] = useState(false);
     const { data, setData, post, processing } = useForm({
@@ -275,6 +277,59 @@ export default function Dashboard({
                             ))}
                         </div>
                     </div>
+
+                    {/* Featured Study Notes / Lecture Sheets */}
+                    {featuredNotes && featuredNotes.length > 0 && (
+                        <div className="p-5 rounded-2xl bg-gradient-to-r from-cyan-950/30 via-slate-900 to-indigo-950/30 border border-slate-800 shadow-sm">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-400">
+                                        <Library className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-sm font-bold text-white">টপিক লেকচার শিট ও রিডিং নোটস</h3>
+                                        <p className="text-[11px] text-slate-400">পরীক্ষার জন্য সাজানো থিওরি নোট ও চিটশিট পড়ুন</p>
+                                    </div>
+                                </div>
+                                <Link
+                                    href={route('notes.index')}
+                                    className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
+                                >
+                                    <span>সব নোট ({featuredNotes.length}+)</span>
+                                    <ChevronRight className="w-3.5 h-3.5" />
+                                </Link>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                {featuredNotes.map((note) => (
+                                    <Link
+                                        key={note.id}
+                                        href={route('notes.show', note.slug)}
+                                        className="p-3.5 rounded-xl bg-slate-900/80 hover:bg-slate-800/80 border border-slate-800 hover:border-cyan-500/30 transition flex flex-col justify-between group shadow-inner"
+                                    >
+                                        <div>
+                                            <div className="flex items-center justify-between gap-1 text-[10px] text-slate-400 mb-1.5">
+                                                <span className="font-semibold text-cyan-400 truncate max-w-[120px]">
+                                                    {note.subject?.name}
+                                                </span>
+                                                <span className="flex items-center gap-0.5 shrink-0">
+                                                    <Clock className="w-3 h-3 text-slate-500" />
+                                                    {note.read_time_minutes} মি.
+                                                </span>
+                                            </div>
+                                            <h4 className="text-xs font-bold text-white group-hover:text-cyan-300 line-clamp-2 leading-snug mb-1">
+                                                {note.title}
+                                            </h4>
+                                        </div>
+                                        <div className="pt-2 text-[11px] font-semibold text-slate-400 group-hover:text-cyan-400 flex items-center justify-between">
+                                            <span>পড়ুন</span>
+                                            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition" />
+                                        </div>
+                                    </Link>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Core IT Subjects Grid */}
                     <div>

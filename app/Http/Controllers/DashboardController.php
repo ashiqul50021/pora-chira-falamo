@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Question;
 use App\Models\QuizAttempt;
+use App\Models\StudyNote;
 use App\Models\Subject;
 use App\Services\StreakService;
 use Illuminate\Http\Request;
@@ -45,6 +46,13 @@ class DashboardController extends Controller
         // Today's daily report with quick practice logs, activity, and performance scale
         $dailyReport = $this->streakService->getDailyReport($user);
 
+        // Featured study notes
+        $featuredNotes = StudyNote::with('subject')
+            ->where('is_published', true)
+            ->latest()
+            ->take(3)
+            ->get();
+
         return Inertia::render('Dashboard', [
             'streak' => $streak,
             'todayGoal' => $todayGoal,
@@ -55,6 +63,7 @@ class DashboardController extends Controller
             'weeklyActivity' => $weeklyPerformance['daily_history'],
             'penaltyCount' => $streak->penalty_count,
             'dailyReport' => $dailyReport,
+            'featuredNotes' => $featuredNotes,
         ]);
     }
 }
