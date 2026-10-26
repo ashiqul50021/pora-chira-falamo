@@ -113,7 +113,8 @@ class GeminiService
         $response = $this->sendRequest($payload);
         $rawText = $this->extractTextFromResponse($response);
 
-        $decoded = json_decode($rawText, true);
+        $cleanText = $this->cleanJsonString($rawText);
+        $decoded = json_decode($cleanText, true);
 
         if (json_last_error() !== JSON_ERROR_NONE || ! is_array($decoded)) {
             throw new RuntimeException('Failed to decode Gemini JSON response: '.json_last_error_msg().'. Raw: '.$rawText);
@@ -162,13 +163,46 @@ class GeminiService
         $rawText = $this->extractTextFromResponse($response);
 
         if ($jsonResponse) {
-            $decoded = json_decode($rawText, true);
+            $cleanText = $this->cleanJsonString($rawText);
+            $decoded = json_decode($cleanText, true);
             if (is_array($decoded)) {
                 return $decoded;
             }
         }
 
         return $rawText;
+    }
+
+    /**
+     * Clean raw JSON response which might be wrapped in markdown code blocks or surrounding text.
+     */
+    public function cleanJsonString(string $text): string
+    {
+        $text = trim($text);
+
+        // Check if enclosed or contains markdown ```json ... ``` blocks
+        if (preg_match('/```(?:json)?\s*([\s\S]*?)\s*```/i', $text, $matches)) {
+            $extracted = trim($matches[1]);
+            if (! empty($extracted)) {
+                return $extracted;
+            }
+        }
+
+        // Check if enclosed in array [ ... ]
+        $firstBracket = strpos($text, '[');
+        $lastBracket = strrpos($text, ']');
+        if ($firstBracket !== false && $lastBracket !== false && $lastBracket > $firstBracket) {
+            return trim(substr($text, $firstBracket, $lastBracket - $firstBracket + 1));
+        }
+
+        // Check if enclosed in object { ... }
+        $firstBrace = strpos($text, '{');
+        $lastBrace = strrpos($text, '}');
+        if ($firstBrace !== false && $lastBrace !== false && $lastBrace > $firstBrace) {
+            return trim(substr($text, $firstBrace, $lastBrace - $firstBrace + 1));
+        }
+
+        return $text;
     }
 
     /**

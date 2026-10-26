@@ -64,4 +64,32 @@ class GeminiServiceTest extends TestCase
         $this->assertSame('What is a binary search tree?', $data['question']);
         $this->assertSame('Data Structures', $data['topic']);
     }
+
+    public function test_it_can_extract_from_multiple_images_when_response_is_wrapped_in_markdown(): void
+    {
+        Http::fake([
+            'https://generativelanguage.googleapis.com/*' => Http::response([
+                'candidates' => [
+                    [
+                        'content' => [
+                            'parts' => [
+                                ['text' => "```json\n[{\"question_text\":\"What is RAM?\"}]\n```"],
+                            ],
+                        ],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $service = new GeminiService(apiKey: 'test-api-key', model: 'gemini-2.5-flash');
+        $result = $service->extractFromMultipleImages(
+            [['data' => 'dummy-base64', 'mime_type' => 'image/jpeg']],
+            'Extract questions',
+            true
+        );
+
+        $this->assertIsArray($result);
+        $this->assertCount(1, $result);
+        $this->assertSame('What is RAM?', $result[0]['question_text']);
+    }
 }
