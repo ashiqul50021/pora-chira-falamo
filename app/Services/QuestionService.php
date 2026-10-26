@@ -6,6 +6,7 @@ use App\Models\Question;
 use App\Models\Subject;
 use App\Models\Topic;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -132,7 +133,9 @@ PROMPT;
         $result = $this->gemini->extractFromMultipleImages($imagesData, $prompt, true);
 
         if (! is_array($result)) {
-            throw new RuntimeException('Gemini did not return an array from the images.');
+            Log::error('Gemini image extraction non-array response: '.substr((string) $result, 0, 1000));
+            $preview = mb_substr(trim(strip_tags((string) $result)), 0, 150);
+            throw new RuntimeException("Gemini did not return an array from the images. Response preview: \"{$preview}\"");
         }
 
         $questions = $this->normalizeQuestionsResult($result);

@@ -196,6 +196,14 @@ class GeminiService
             return trim(substr($text, $firstBracket, $lastBracket - $firstBracket + 1));
         }
 
+        // Handle possible truncated array (e.g. token limit cutoff: "[{...}, {... , ")
+        if ($firstBracket !== false && ($lastBracket === false || $lastBracket < $firstBracket)) {
+            $lastClosingBrace = strrpos($text, '}');
+            if ($lastClosingBrace !== false && $lastClosingBrace > $firstBracket) {
+                return trim(substr($text, $firstBracket, $lastClosingBrace - $firstBracket + 1)).']';
+            }
+        }
+
         // Check if enclosed in object { ... }
         $firstBrace = strpos($text, '{');
         $lastBrace = strrpos($text, '}');
