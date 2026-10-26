@@ -224,6 +224,142 @@ class QuestionController extends Controller
     }
 
     /**
+     * Interactive conversational AI Question Studio endpoint (Chat with multiple images / drag & drop).
+     */
+    public function studioChat(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'message' => 'nullable|string',
+            'history' => 'nullable|array',
+            'images.*' => 'nullable|image|max:12288',
+        ]);
+
+        $files = $request->file('images', []);
+        $userMessage = trim($validated['message'] ?? '');
+        $history = $validated['history'] ?? [];
+
+        if (empty($userMessage) && empty($files)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please enter a message or upload at least one image.',
+            ], 422);
+        }
+
+        try {
+            // Build contents for Gemini API
+            $contents = [];
+
+            // Add previous history
+            foreach ($history as $h) {
+                if (isset($h['role'], $h['content']) && in_array($h['role'], ['user', 'model'])) {
+                    $contents[] = [
+                        'role' => $h['role'],
+                        'parts' => [
+                            ['text' => (string) $h['content']],
+                        ],
+                    ];
+                }
+            }
+
+            // Current user turn parts
+            $currentParts = [];
+
+            // Add images if provided
+            $storedUrls = [];
+            foreach ($files as $file) {
+                $currentParts[] = [
+                    'inline_data' => [
+                        'mime_type' => $file->getMimeType() ?: 'image/jpeg',
+                        'data' => base64_encode(file_get_contents($file->getRealPath())),
+                    ],
+                ];
+
+                $storedPath = $file->store('question-uploads', 'public');
+                $storedUrls[] = Storage::url($storedPath);
+            }
+
+            // Add user text instruction
+            $textPrompt = $userMessage !== ''
+                ? $userMessage
+                : 'Please extract all questions (MCQ and Written) from these exam images.';
+
+            $currentParts[] = [
+                'text' => $textPrompt,
+            ];
+
+            $contents[] = [
+                'role' => 'user',
+                'parts' => $currentParts,
+            ];
+
+            $systemInstruction = <<<'INSTRUCTION'
+You are an expert Computer Science Professor and IT Exam Question Extraction Assistant in "PoraChira IT" platform.
+When the user shares images or text of exam papers, questions, or topics:
+1. Provide a friendly conversational summary/explanation of what was found.
+2. If there are questions present, format them clearly and ALSO include a valid JSON block enclosed in ```json ... ``` with the questions following this exact schema:
+```json
+[
+  {
+    "type": "mcq or written",
+    "marks": 1,
+    "exam_name": "Exam name if mentioned or inferred, else null",
+    "year": "Exam year if mentioned or inferred, else null",
+    "question_text": "Clean question statement without options",
+    "code_snippet": "Optional code snippet from question statement, else null",
+    "options": {
+      "A": "Option A",
+      "B": "Option B",
+      "C": "Option C",
+      "D": "Option D"
+    },
+    "correct_option": "A or B or C or D (for mcq only, null for written)",
+    "written_answer": "Complete solution for written questions (null for mcq)",
+    "explanation": "Detailed explanation and why the correct answer is correct",
+    "subject_name": "Standard Computer Science Subject name",
+    "topic_name": "Specific Topic name",
+    "difficulty": "easy or medium or hard"
+  }
+]
+```
+3. If the user asks for corrections, clarifications, or explanations, answer helpfully in Bengali and English as appropriate.
+INSTRUCTION;
+
+            $replyText = $this->gemini->chat($contents, $systemInstruction);
+
+            // Attempt to parse structured questions from reply
+            $parsedQuestions = [];
+            $cleanJson = $this->gemini->cleanJsonString($replyText);
+            $decoded = json_decode($cleanJson, true);
+
+            if (is_array($decoded)) {
+                $rawList = $this->questionService->normalizeQuestionsResult($decoded);
+                $withDuplicates = $this->questionService->attachDuplicateStatus($rawList);
+                $primaryUrl = $storedUrls[0] ?? null;
+
+                foreach ($withDuplicates as $q) {
+                    if ($primaryUrl && empty($q['image_path'])) {
+                        $q['image_path'] = $primaryUrl;
+                    }
+                    $parsedQuestions[] = $q;
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'reply' => $replyText,
+                'questions' => $parsedQuestions,
+                'count' => count($parsedQuestions),
+                'image_urls' => $storedUrls,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'AI Studio Chat failed: '.$e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
      * Check an array of questions for duplicates against the database and batch.
      */
     public function checkDuplicates(Request $request): JsonResponse

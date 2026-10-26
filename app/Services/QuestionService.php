@@ -19,7 +19,7 @@ class QuestionService
     /**
      * System instruction prompt for parsing IT exam questions (Both MCQ and Written).
      */
-    protected function getExtractionPrompt(): string
+    public function getExtractionPrompt(): string
     {
         $existingSubjects = Subject::with('topics')->get();
         if ($existingSubjects->isNotEmpty()) {
@@ -250,7 +250,7 @@ PROMPT;
      *
      * @return array<int, array<string, mixed>>
      */
-    protected function normalizeQuestionsResult(array $result): array
+    public function normalizeQuestionsResult(array $result): array
     {
         if (isset($result['question_text'])) {
             return [$result];

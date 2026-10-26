@@ -25,6 +25,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/upload', [QuestionController::class, 'create'])->name('upload');
         Route::post('/extract-text', [QuestionController::class, 'extractText'])->name('extract-text');
         Route::post('/extract-image', [QuestionController::class, 'extractImage'])->name('extract-image');
+        Route::post('/studio-chat', [QuestionController::class, 'studioChat'])->name('studio-chat');
         Route::post('/generate-ai', [QuestionController::class, 'generateWithAi'])->name('generate-ai');
         Route::post('/check-duplicates', [QuestionController::class, 'checkDuplicates'])->name('check-duplicates');
         Route::post('/', [QuestionController::class, 'store'])->name('store');

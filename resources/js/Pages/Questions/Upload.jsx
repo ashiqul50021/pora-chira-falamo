@@ -21,10 +21,16 @@ import {
     X,
     Images,
     AlertTriangle,
+    MessageSquare,
+    Send,
+    Bot,
+    User,
+    Paperclip,
+    Check,
 } from 'lucide-react';
 
 export default function Upload({ subjects }) {
-    const [activeTab, setActiveTab] = useState('image'); // 'image', 'text', 'generate'
+    const [activeTab, setActiveTab] = useState('chat'); // 'chat', 'image', 'text', 'generate'
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [extractedQuestions, setExtractedQuestions] = useState([]);
@@ -34,6 +40,19 @@ export default function Upload({ subjects }) {
     const [isDragging, setIsDragging] = useState(false);
     const [skipDuplicatesOnSave, setSkipDuplicatesOnSave] = useState(true);
     const [checkingDuplicates, setCheckingDuplicates] = useState(false);
+
+    // Chat Assistant states
+    const [chatMessages, setChatMessages] = useState([
+        {
+            role: 'model',
+            content: 'স্বাগতম! আমি আপনার IT Exam Assistant। এখানে এক বা একাধিক প্রশ্নপত্রের ছবি ড্র্যাগ-অ্যান্ড-ড্রপ বা সিলেক্ট করে যেকোনো নির্দেশনা দিন (যেমন: "ছবিগুলো থেকে সব MCQ বের করে দাও", "লিখিত প্রশ্নগুলো সলভ কর", ইত্যাদি)। আমি উত্তর দেব এবং নিচেই প্রশ্নগুলো ডাটাবেসে সেভ করার জন্য প্রস্তুত করে দেব।',
+            images: [],
+            questions: [],
+        },
+    ]);
+    const [chatInput, setChatInput] = useState('');
+    const [chatImages, setChatImages] = useState([]);
+    const [chatDragging, setChatDragging] = useState(false);
 
     // Form states
     const [rawText, setRawText] = useState('');
@@ -225,6 +244,113 @@ export default function Upload({ subjects }) {
         }
     };
 
+    const handleChatAddFiles = async (files) => {
+        if (!files || files.length === 0) return;
+        const rawFiles = Array.from(files).filter((f) => f.type.startsWith('image/'));
+
+        const newItems = [];
+        for (const raw of rawFiles) {
+            const fileToUse = await compressImage(raw);
+            newItems.push({
+                id: Math.random().toString(36).substring(2, 9),
+                file: fileToUse,
+                preview: URL.createObjectURL(fileToUse),
+                name: fileToUse.name,
+                size: (fileToUse.size / (1024 * 1024)).toFixed(2) + ' MB',
+            });
+        }
+
+        setChatImages((prev) => [...prev, ...newItems]);
+    };
+
+    const handleChatRemoveImage = (id) => {
+        setChatImages((prev) => {
+            const item = prev.find((img) => img.id === id);
+            if (item?.preview) URL.revokeObjectURL(item.preview);
+            return prev.filter((img) => img.id !== id);
+        });
+    };
+
+    const handleChatSubmit = async (e) => {
+        e?.preventDefault();
+        const msg = chatInput.trim();
+        const currentImgs = [...chatImages];
+
+        if (!msg && currentImgs.length === 0) return;
+
+        setLoading(true);
+        setError(null);
+
+        // Append user message to chat UI immediately
+        const userMsgObj = {
+            role: 'user',
+            content: msg || (currentImgs.length > 0 ? `[${currentImgs.length}টি প্রশ্নপত্রের ছবি পাঠানো হয়েছে - অনুগ্রহ করে প্রশ্নগুলো বের করুন]` : ''),
+            images: currentImgs.map((i) => i.preview),
+        };
+
+        const updatedHistory = [...chatMessages, userMsgObj];
+        setChatMessages(updatedHistory);
+        setChatInput('');
+        setChatImages([]);
+
+        const formData = new FormData();
+        if (msg) formData.append('message', msg);
+        currentImgs.forEach((img) => {
+            formData.append('images[]', img.file);
+        });
+
+        // Pass clean chat history (without huge blobs)
+        const historyForBackend = chatMessages
+            .slice(-6)
+            .map((m) => ({ role: m.role, content: m.content }));
+        formData.append('history', JSON.stringify(historyForBackend));
+
+        try {
+            const res = await axios.post(route('questions.studio-chat'), formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+
+            if (res.data.success) {
+                const modelMsgObj = {
+                    role: 'model',
+                    content: res.data.reply,
+                    questions: res.data.questions || [],
+                };
+                setChatMessages((prev) => [...prev, modelMsgObj]);
+
+                if (res.data.questions && res.data.questions.length > 0) {
+                    setExtractedQuestions(res.data.questions);
+                    if (res.data.image_urls?.length) {
+                        setUploadedImageUrl(res.data.image_urls[0]);
+                        setUploadedImageUrls(res.data.image_urls);
+                    }
+                }
+            }
+        } catch (err) {
+            const errMsg = err.response?.data?.message || 'Gemini চ্যাট প্রসেস করতে সমস্যা হয়েছে।';
+            setError(errMsg);
+            setChatMessages((prev) => [
+                ...prev,
+                {
+                    role: 'model',
+                    content: `⚠️ দুঃখিত, রিকোয়েস্টটি সম্পন্ন করা যায়নি: ${errMsg}`,
+                    isError: true,
+                },
+            ]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleAddChatQuestionToExtracted = (q) => {
+        setExtractedQuestions((prev) => {
+            if (prev.some((existing) => existing.question_text === q.question_text)) {
+                return prev;
+            }
+            return [...prev, q];
+        });
+    };
+
     const handleQuestionChange = (index, field, value) => {
         const updated = [...extractedQuestions];
         updated[index][field] = value;
@@ -327,7 +453,19 @@ export default function Upload({ subjects }) {
             {/* Input Options Card */}
             <div className="bg-[#0f172a] border border-slate-800 rounded-xl p-5 shadow-sm mb-8">
                 {/* Clean Segmented Tab Control */}
-                <div className="flex p-1 bg-slate-900 border border-slate-800 rounded-lg max-w-lg mb-6">
+                <div className="flex p-1 bg-slate-900 border border-slate-800 rounded-lg max-w-xl mb-6">
+                    <button
+                        onClick={() => { setActiveTab('chat'); setError(null); }}
+                        className={`flex-1 py-1.5 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
+                            activeTab === 'chat'
+                                ? 'bg-indigo-600 text-white shadow-sm'
+                                : 'text-slate-400 hover:text-white'
+                        }`}
+                    >
+                        <MessageSquare className="w-3.5 h-3.5 text-amber-300" />
+                        <span>১. এআই চ্যাট স্টুডিও (লাইভ)</span>
+                    </button>
+
                     <button
                         onClick={() => { setActiveTab('image'); setError(null); }}
                         className={`flex-1 py-1.5 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
@@ -337,7 +475,7 @@ export default function Upload({ subjects }) {
                         }`}
                     >
                         <ImageIcon className="w-3.5 h-3.5" />
-                        <span>১. ছবি আপলোড (OCR)</span>
+                        <span>২. ছবি আপলোড</span>
                     </button>
 
                     <button
@@ -349,7 +487,7 @@ export default function Upload({ subjects }) {
                         }`}
                     >
                         <FileText className="w-3.5 h-3.5" />
-                        <span>২. টেক্সট পেস্ট</span>
+                        <span>৩. টেক্সট পেস্ট</span>
                     </button>
 
                     <button
@@ -361,9 +499,279 @@ export default function Upload({ subjects }) {
                         }`}
                     >
                         <Sparkles className="w-3.5 h-3.5" />
-                        <span>৩. নতুন প্রশ্ন জেনারেট</span>
+                        <span>৪. নতুন প্রশ্ন</span>
                     </button>
                 </div>
+
+                {/* Tab 0: AI Chat Studio */}
+                {activeTab === 'chat' && (
+                    <div className="space-y-4">
+                        {/* Chat Messages Container */}
+                        <div className="rounded-2xl bg-slate-950/80 border border-slate-800/80 overflow-hidden shadow-inner flex flex-col h-[520px]">
+                            {/* Header */}
+                            <div className="px-4 py-3 bg-slate-900/90 border-b border-slate-800/80 flex items-center justify-between">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center">
+                                        <Bot className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xs font-bold text-white flex items-center gap-1.5">
+                                            <span>Gemini Vision Chat Studio</span>
+                                            <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                        </h3>
+                                        <p className="text-[10px] text-slate-400">
+                                            ছবি ড্রপ করুন বা পেস্ট করুন, প্রশ্ন নিয়ে সরাসরি কথোপকথন ও এক ক্লিকে সেভ করুন
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setChatMessages([
+                                            {
+                                                role: 'model',
+                                                content: 'নতুন কথোপকথন শুরু হলো। ছবি বা প্রম্পট ড্রপ করুন।',
+                                                images: [],
+                                                questions: [],
+                                            },
+                                        ])
+                                    }
+                                    className="px-2.5 py-1 text-[11px] font-medium text-slate-400 hover:text-white bg-slate-800/60 hover:bg-slate-800 rounded-lg border border-slate-700/60 transition"
+                                >
+                                    রিসেট চ্যাট
+                                </button>
+                            </div>
+
+                            {/* Message List */}
+                            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                                {chatMessages.map((msg, idx) => (
+                                    <div
+                                        key={idx}
+                                        className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                                    >
+                                        {msg.role === 'model' && (
+                                            <div className="w-7 h-7 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center shrink-0 mt-0.5">
+                                                <Bot className="w-3.5 h-3.5" />
+                                            </div>
+                                        )}
+
+                                        <div
+                                            className={`max-w-[85%] sm:max-w-[78%] rounded-2xl p-4 text-xs leading-relaxed space-y-3 ${
+                                                msg.role === 'user'
+                                                    ? 'bg-indigo-600 text-white rounded-tr-sm shadow-md'
+                                                    : msg.isError
+                                                    ? 'bg-rose-500/10 border border-rose-500/30 text-rose-200 rounded-tl-sm'
+                                                    : 'bg-slate-900/90 border border-slate-800 text-slate-200 rounded-tl-sm shadow-sm'
+                                            }`}
+                                        >
+                                            {/* Images attached by user */}
+                                            {msg.images && msg.images.length > 0 && (
+                                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pb-2">
+                                                    {msg.images.map((imgUrl, iIdx) => (
+                                                        <a
+                                                            key={iIdx}
+                                                            href={imgUrl}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="block aspect-[4/3] rounded-lg overflow-hidden border border-white/20 hover:opacity-90 transition bg-black/40"
+                                                        >
+                                                            <img
+                                                                src={imgUrl}
+                                                                alt={`Upload ${iIdx + 1}`}
+                                                                className="w-full h-full object-cover object-top"
+                                                            />
+                                                        </a>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            <div className="whitespace-pre-wrap font-sans">
+                                                {msg.content}
+                                            </div>
+
+                                            {/* Extracted Questions Preview Cards directly inside Chat */}
+                                            {msg.questions && msg.questions.length > 0 && (
+                                                <div className="pt-3 border-t border-slate-800/80 space-y-2.5">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[11px] font-bold text-amber-300 flex items-center gap-1.5">
+                                                            <Sparkles className="w-3.5 h-3.5" />
+                                                            <span>ডিটেক্ট করা প্রশ্নসমূহ ({msg.questions.length})</span>
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                msg.questions.forEach(handleAddChatQuestionToExtracted);
+                                                            }}
+                                                            className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold transition shadow-sm flex items-center gap-1"
+                                                        >
+                                                            <Check className="w-3 h-3" />
+                                                            <span>সবগুলো রিভিউ লিস্টে যোগ করুন</span>
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                                                        {msg.questions.map((q, qIdx) => (
+                                                            <div
+                                                                key={qIdx}
+                                                                className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 flex items-start justify-between gap-2.5 hover:border-slate-700 transition"
+                                                            >
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="flex items-center gap-1.5 mb-1">
+                                                                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                                                                            {q.type}
+                                                                        </span>
+                                                                        {q.exam_name && (
+                                                                            <span className="text-[10px] text-slate-400 truncate">
+                                                                                {q.exam_name} {q.year ? `(${q.year})` : ''}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="text-[11px] font-medium text-white truncate">
+                                                                        {q.question_text}
+                                                                    </div>
+                                                                </div>
+
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleAddChatQuestionToExtracted(q)}
+                                                                    className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-indigo-300 text-[10px] font-semibold border border-slate-700/80 shrink-0 transition"
+                                                                >
+                                                                    + সেভ লিস্টে নিন
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {msg.role === 'user' && (
+                                            <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+                                                <User className="w-3.5 h-3.5" />
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+
+                                {loading && (
+                                    <div className="flex gap-3 items-center text-slate-400 text-xs py-2">
+                                        <div className="w-7 h-7 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center shrink-0 animate-spin">
+                                            <RefreshCw className="w-3.5 h-3.5" />
+                                        </div>
+                                        <span>Gemini আপনার ছবি এবং নির্দেশনা নিয়ে ভাবছে ও প্রশ্ন তৈরি করছে...</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Image Attachment Preview Bar */}
+                            {chatImages.length > 0 && (
+                                <div className="px-4 py-2 bg-slate-900 border-t border-slate-800 flex items-center gap-2.5 overflow-x-auto">
+                                    <span className="text-[10px] font-semibold text-slate-400 shrink-0">
+                                        সংযুক্ত পাতা ({chatImages.length}টি):
+                                    </span>
+                                    {chatImages.map((img) => (
+                                        <div
+                                            key={img.id}
+                                            className="relative group shrink-0 w-12 h-14 rounded-lg overflow-hidden border border-slate-700 bg-black"
+                                        >
+                                            <img
+                                                src={img.preview}
+                                                alt={img.name}
+                                                className="w-full h-full object-cover object-top"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => handleChatRemoveImage(img.id)}
+                                                className="absolute top-0.5 right-0.5 p-0.5 bg-rose-600/90 text-white rounded hover:bg-rose-600 transition"
+                                            >
+                                                <X className="w-2.5 h-2.5" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Chat Input Bar with Drag & Drop */}
+                            <form
+                                onSubmit={handleChatSubmit}
+                                onDragOver={(e) => {
+                                    e.preventDefault();
+                                    setChatDragging(true);
+                                }}
+                                onDragLeave={() => setChatDragging(false)}
+                                onDrop={(e) => {
+                                    e.preventDefault();
+                                    setChatDragging(false);
+                                    if (e.dataTransfer.files?.length) {
+                                        handleChatAddFiles(e.dataTransfer.files);
+                                    }
+                                }}
+                                className={`p-3 bg-slate-900 border-t transition ${
+                                    chatDragging
+                                        ? 'border-indigo-500 bg-indigo-500/10'
+                                        : 'border-slate-800'
+                                }`}
+                            >
+                                <div className="flex items-center gap-2">
+                                    <label
+                                        title="ছবি যোগ করুন বা ড্র্যাগ করে ফেলুন"
+                                        className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-indigo-400 hover:text-indigo-300 border border-slate-700/80 cursor-pointer transition shrink-0"
+                                    >
+                                        <Paperclip className="w-4 h-4" />
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            multiple
+                                            onChange={(e) => {
+                                                handleChatAddFiles(e.target.files);
+                                                e.target.value = '';
+                                            }}
+                                            disabled={loading}
+                                            className="hidden"
+                                        />
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        value={chatInput}
+                                        onChange={(e) => setChatInput(e.target.value)}
+                                        onPaste={(e) => {
+                                            const items = e.clipboardData?.items;
+                                            if (items) {
+                                                const imageFiles = [];
+                                                for (let i = 0; i < items.length; i++) {
+                                                    if (items[i].type.indexOf('image') !== -1) {
+                                                        const blob = items[i].getAsFile();
+                                                        if (blob) imageFiles.push(blob);
+                                                    }
+                                                }
+                                                if (imageFiles.length > 0) {
+                                                    handleChatAddFiles(imageFiles);
+                                                }
+                                            }
+                                        }}
+                                        placeholder="ছবি পেস্ট (Ctrl+V) করুন অথবা লিখুন: 'এই ছবিগুলো থেকে প্রশ্ন ও সমাধান বের করো'..."
+                                        disabled={loading}
+                                        className="flex-1 px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 placeholder-slate-500 text-xs focus:outline-none focus:border-indigo-500 font-sans"
+                                    />
+
+                                    <button
+                                        type="submit"
+                                        disabled={loading || (!chatInput.trim() && chatImages.length === 0)}
+                                        className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-semibold text-xs transition flex items-center gap-1.5 shrink-0 shadow-sm shadow-indigo-600/30"
+                                    >
+                                        <span>পাঠান</span>
+                                        <Send className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                                <div className="text-[10px] text-slate-500 mt-1.5 flex items-center justify-between px-1">
+                                    <span>টিপস: ব্রাউজারে স্ক্রিনশট কপি করে সরাসরি ইনপুট বক্সে <kbd className="px-1 py-0.5 rounded bg-slate-800 text-slate-300 font-mono text-[9px]">Ctrl+V</kbd> দিয়ে পেস্ট করতে পারেন।</span>
+                                    {chatImages.length > 0 && <span className="text-indigo-400 font-semibold">{chatImages.length}টি ছবি সংযুক্ত</span>}
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
 
                 {/* Tab 1: Image Upload */}
                 {activeTab === 'image' && (

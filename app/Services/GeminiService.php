@@ -250,6 +250,37 @@ class GeminiService
     }
 
     /**
+     * Send conversational chat messages (with multi-turn history and optional images) to Gemini.
+     *
+     * @param  array<int, array{role: string, parts: array<int, mixed>}>  $contents
+     * @param  array<string, mixed>  $generationConfig
+     */
+    public function chat(array $contents, ?string $systemInstruction = null, array $generationConfig = []): string
+    {
+        $this->ensureConfigured();
+
+        $payload = [
+            'contents' => $contents,
+        ];
+
+        if ($systemInstruction) {
+            $payload['system_instruction'] = [
+                'parts' => [
+                    ['text' => $systemInstruction],
+                ],
+            ];
+        }
+
+        if (! empty($generationConfig)) {
+            $payload['generationConfig'] = $generationConfig;
+        }
+
+        $response = $this->sendRequest($payload);
+
+        return $this->extractTextFromResponse($response);
+    }
+
+    /**
      * Send HTTP POST request to Google Gemini API with automatic retry on transient errors (e.g. 503 / 429).
      */
     protected function sendRequest(array $payload): Response
