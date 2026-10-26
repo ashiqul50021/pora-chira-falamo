@@ -89,6 +89,8 @@ class QuizController extends Controller
             'title' => 'required|string|max:200',
             'creation_mode' => 'nullable|string|in:syllabus,exam',
             'subject_id' => 'nullable|exists:subjects,id',
+            'subject_ids' => 'nullable|array',
+            'subject_ids.*' => 'integer|exists:subjects,id',
             'topic_id' => 'nullable|exists:topics,id',
             'topic_ids' => 'nullable|array',
             'topic_ids.*' => 'integer|exists:topics,id',
@@ -110,15 +112,15 @@ class QuizController extends Controller
                 $query->where('year', trim($validated['year']));
             }
         } else {
-            // Mode 2: Syllabus / Subject & Multiple Topics
-            if (! empty($validated['subject_id'])) {
-                $query->where('subject_id', $validated['subject_id']);
-            }
-
+            // Mode 2: Syllabus / Multiple Subjects & Multiple Topics
             if (! empty($validated['topic_ids']) && is_array($validated['topic_ids'])) {
                 $query->whereIn('topic_id', $validated['topic_ids']);
             } elseif (! empty($validated['topic_id'])) {
                 $query->where('topic_id', $validated['topic_id']);
+            } elseif (! empty($validated['subject_ids']) && is_array($validated['subject_ids'])) {
+                $query->whereIn('subject_id', $validated['subject_ids']);
+            } elseif (! empty($validated['subject_id'])) {
+                $query->where('subject_id', $validated['subject_id']);
             }
         }
 
@@ -126,7 +128,7 @@ class QuizController extends Controller
 
         if ($questions->count() < 3) {
             return redirect()->back()->withErrors([
-                'question_count' => 'আপনার নির্বাচিত ফিল্টারের অধীনে পর্যাপ্ত প্রশ্ন (কমপক্ষে ৩টি) পাওয়া যায়নি। অন্য টপিক বা পরীক্ষা বাছাই করুন।',
+                'question_count' => 'আপনার নির্বাচিত বিষয়ের ফিল্টারের অধীনে পর্যাপ্ত প্রশ্ন (কমপক্ষে ৩টি) পাওয়া যায়নি। অন্য টপিক বা বিষয় বাছাই করুন।',
             ]);
         }
 
@@ -134,9 +136,13 @@ class QuizController extends Controller
             ? $validated['topic_ids'][0]
             : ($validated['topic_id'] ?? null);
 
+        $firstSubjectId = ! empty($validated['subject_ids']) && is_array($validated['subject_ids'])
+            ? $validated['subject_ids'][0]
+            : ($validated['subject_id'] ?? null);
+
         $quiz = Quiz::create([
             'user_id' => $request->user()->id,
-            'subject_id' => $validated['subject_id'] ?? null,
+            'subject_id' => $firstSubjectId,
             'topic_id' => $firstTopicId,
             'title' => $validated['title'],
             'description' => $validated['description'] ?? null,

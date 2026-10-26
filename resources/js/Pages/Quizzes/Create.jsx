@@ -25,9 +25,10 @@ export default function Create({
     const [creationMode, setCreationMode] = useState('syllabus'); // 'syllabus' or 'exam'
 
     const { data, setData, post, processing, errors } = useForm({
-        title: 'কম্পিউটার সায়েন্স ও আইটি ফুল মক টেস্ট',
+        title: 'কম্পিউটার সায়েন্স ও আইটি কাস্টম মক টেস্ট',
         creation_mode: 'syllabus',
         subject_id: '',
+        subject_ids: [],
         topic_id: '',
         topic_ids: [],
         exam_name: '',
@@ -39,9 +40,6 @@ export default function Create({
         description: 'বাস্তব পরীক্ষার সময় ও নেগেটিভ মার্কিং স্ট্যান্ডার্ড মেনে তৈরি করা মক টেস্ট।',
     });
 
-    const selectedSubjectObj = subjects.find((s) => String(s.id) === String(data.subject_id));
-    const availableTopics = selectedSubjectObj?.topics || [];
-
     const handleModeSwitch = (mode) => {
         setCreationMode(mode);
         setData((prev) => ({
@@ -50,9 +48,50 @@ export default function Create({
             title:
                 mode === 'exam'
                     ? 'বিগত বছরের চাকরির পরীক্ষা মক টেস্ট'
-                    : 'কম্পিউটার সায়েন্স ও আইটি ফুল মক টেস্ট',
+                    : 'কম্পিউটার সায়েন্স ও আইটি কাস্টম মক টেস্ট',
         }));
     };
+
+    // Multiple Subjects Selection Toggle
+    const handleSubjectToggle = (subjectId) => {
+        setData((prev) => {
+            const currentSubs = prev.subject_ids || [];
+            let updatedSubs = [];
+            if (currentSubs.includes(subjectId)) {
+                updatedSubs = currentSubs.filter((id) => id !== subjectId);
+            } else {
+                updatedSubs = [...currentSubs, subjectId];
+            }
+
+            // Filter out topics that belong to deselected subjects
+            const validTopicIds = subjects
+                .filter((s) => updatedSubs.includes(s.id))
+                .flatMap((s) => s.topics || [])
+                .map((t) => t.id);
+
+            const updatedTopics = (prev.topic_ids || []).filter((tId) => validTopicIds.includes(tId));
+
+            return {
+                ...prev,
+                subject_ids: updatedSubs,
+                topic_ids: updatedTopics,
+            };
+        });
+    };
+
+    const handleSelectAllSubjects = () => {
+        const allSubIds = subjects.map((s) => s.id);
+        setData((prev) => ({
+            ...prev,
+            subject_ids: prev.subject_ids.length === allSubIds.length ? [] : allSubIds,
+            topic_ids: [],
+        }));
+    };
+
+    // Topics available for all selected subjects
+    const availableTopics = subjects
+        .filter((s) => data.subject_ids?.includes(s.id))
+        .flatMap((s) => (s.topics || []).map((t) => ({ ...t, subject_name: s.name })));
 
     const handleTopicToggle = (topicId) => {
         setData((prev) => {
@@ -72,8 +111,7 @@ export default function Create({
     };
 
     const handleSelectAllTopics = () => {
-        if (!selectedSubjectObj) return;
-        const allIds = selectedSubjectObj.topics.map((t) => t.id);
+        const allIds = availableTopics.map((t) => t.id);
         setData((prev) => ({
             ...prev,
             topic_ids: prev.topic_ids.length === allIds.length ? [] : allIds,
@@ -101,7 +139,7 @@ export default function Create({
                             <span>নতুন কাস্টম মক টেস্ট তৈরি করুন</span>
                         </h1>
                         <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-                            একাধিক টপিক নির্বাচন করুন অথবা বিগত বছরের আসল পরীক্ষা ও সাল ভিত্তিক প্রশ্ন নিয়ে টেস্ট সাজান।
+                            এক বা একাধিক বিষয় ও টপিক নির্বাচন করুন অথবা বিগত বছরের আসল পরীক্ষা ও সাল ভিত্তিক প্রশ্ন নিয়ে টেস্ট সাজান।
                         </p>
                     </div>
                 </div>
@@ -122,7 +160,7 @@ export default function Create({
                         }`}
                     >
                         <Layers className="w-4 h-4" />
-                        <span>১. সিলেবাস ও টপিক ভিত্তিক (Multi-Topic)</span>
+                        <span>১. বিষয় ও টপিক ভিত্তিক (Multi-Subject & Topics)</span>
                     </button>
 
                     <button
@@ -158,45 +196,73 @@ export default function Create({
                         {errors.title && <p className="text-xs text-rose-400 mt-1">{errors.title}</p>}
                     </div>
 
-                    {/* Mode 1: Syllabus with Multi-Topic Selector */}
+                    {/* Mode 1: Syllabus with Multiple Subjects & Multi-Topic Selector */}
                     {creationMode === 'syllabus' && (
                         <div className="space-y-4 p-4 rounded-xl bg-slate-900/60 border border-slate-700/60">
+                            {/* Multi-Subject Selection */}
                             <div>
-                                <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
-                                    <span>বিষয় নির্বাচন (Subject):</span>
-                                    <span className="text-[11px] text-slate-400 font-normal">
-                                        সবগুলো বিষয় অথবা একটি নির্দিষ্ট বিষয় বেছে নিন
-                                    </span>
-                                </label>
-                                <select
-                                    value={data.subject_id}
-                                    onChange={(e) => {
-                                        const subId = e.target.value;
-                                        setData((prev) => ({
-                                            ...prev,
-                                            subject_id: subId,
-                                            topic_id: '',
-                                            topic_ids: [],
-                                        }));
-                                    }}
-                                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-cyan-500 font-medium"
-                                >
-                                    <option value="">সবগুলো বিষয় মিলিয়ে (Full Syllabus Mock)</option>
-                                    {subjects.map((s) => (
-                                        <option key={s.id} value={s.id}>
-                                            {s.name} ({s.topics?.length || 0}টি টপিক)
-                                        </option>
-                                    ))}
-                                </select>
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                                        <BookOpen className="w-4 h-4 text-cyan-400" />
+                                        <span>এক বা একাধিক বিষয় নির্বাচন করুন (Select Subjects):</span>
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={handleSelectAllSubjects}
+                                        className="text-[11px] text-cyan-400 hover:text-cyan-300 font-medium underline"
+                                    >
+                                        {data.subject_ids.length === subjects.length
+                                            ? 'সব আনসিলেক্ট করুন'
+                                            : 'সব বিষয় সিলেক্ট করুন (Full Syllabus)'}
+                                    </button>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
+                                    {subjects.map((sub) => {
+                                        const isSelected = data.subject_ids.includes(sub.id);
+                                        return (
+                                            <button
+                                                key={sub.id}
+                                                type="button"
+                                                onClick={() => handleSubjectToggle(sub.id)}
+                                                className={`p-2.5 rounded-xl text-left text-xs font-medium transition flex items-center justify-between border ${
+                                                    isSelected
+                                                        ? 'bg-indigo-600/20 border-indigo-500 text-white'
+                                                        : 'bg-slate-950/40 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                                                }`}
+                                            >
+                                                <span className="truncate pr-2 font-medium">{sub.name}</span>
+                                                <div
+                                                    className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border transition ${
+                                                        isSelected
+                                                            ? 'bg-indigo-500 border-indigo-400 text-white'
+                                                            : 'border-slate-700 bg-slate-900'
+                                                    }`}
+                                                >
+                                                    {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <div className="text-[10px] text-slate-400 mt-1.5">
+                                    {data.subject_ids.length > 0 ? (
+                                        <span className="text-indigo-400 font-semibold">
+                                            {data.subject_ids.length}টি বিষয় নির্বাচিত হয়েছে।
+                                        </span>
+                                    ) : (
+                                        <span>কোনো বিষয় টিক না দিলে স্বয়ংক্রিয়ভাবে সব বিষয় (পূর্ণাঙ্গ সিলেবাস) থেকে প্রশ্ন আসবে।</span>
+                                    )}
+                                </div>
                             </div>
 
-                            {/* Multiple Topics Checkbox Selector */}
-                            {selectedSubjectObj && availableTopics.length > 0 && (
-                                <div className="pt-2 border-t border-slate-800">
+                            {/* Multiple Topics Checkbox Selector (Aggregated from all selected subjects) */}
+                            {data.subject_ids.length > 0 && availableTopics.length > 0 && (
+                                <div className="pt-3 border-t border-slate-800">
                                     <div className="flex items-center justify-between mb-2">
                                         <label className="text-xs font-semibold text-cyan-300 flex items-center gap-1.5">
                                             <Filter className="w-3.5 h-3.5" />
-                                            <span>নির্দিষ্ট টপিকসমূহ বেছে নিন (একাধিক বাছাই করা যাবে):</span>
+                                            <span>নির্দিষ্ট টপিকসমূহ বেছে নিন (ঐচ্ছিক - একাধিক বাছাই করা যাবে):</span>
                                         </label>
                                         <button
                                             type="button"
@@ -205,11 +271,11 @@ export default function Create({
                                         >
                                             {data.topic_ids.length === availableTopics.length
                                                 ? 'সব আনসিলেক্ট করুন'
-                                                : 'সব সিলেক্ট করুন'}
+                                                : 'সব টপিক সিলেক্ট করুন'}
                                         </button>
                                     </div>
 
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
                                         {availableTopics.map((topic) => {
                                             const isSelected = data.topic_ids.includes(topic.id);
                                             return (
@@ -217,13 +283,20 @@ export default function Create({
                                                     key={topic.id}
                                                     type="button"
                                                     onClick={() => handleTopicToggle(topic.id)}
-                                                    className={`p-2.5 rounded-xl text-left text-xs font-medium transition flex items-center justify-between border ${
+                                                    className={`p-2 rounded-xl text-left text-xs font-medium transition flex items-center justify-between border ${
                                                         isSelected
                                                             ? 'bg-cyan-600/20 border-cyan-500 text-white'
                                                             : 'bg-slate-950/40 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
                                                     }`}
                                                 >
-                                                    <span className="truncate pr-2">{topic.name}</span>
+                                                    <div className="min-w-0 pr-2">
+                                                        <div className="text-[11px] font-semibold text-white truncate">
+                                                            {topic.name}
+                                                        </div>
+                                                        <div className="text-[9px] text-slate-500 truncate">
+                                                            {topic.subject_name}
+                                                        </div>
+                                                    </div>
                                                     <div
                                                         className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border transition ${
                                                             isSelected
@@ -240,10 +313,10 @@ export default function Create({
                                     <div className="text-[10px] text-slate-400 mt-2">
                                         {data.topic_ids.length > 0 ? (
                                             <span className="text-cyan-400 font-semibold">
-                                                নির্বাচিত টপিক: {data.topic_ids.length}টি (শুধুমাত্র এই টপিকগুলো থেকেই প্রশ্ন আসবে)
+                                                নির্দিষ্ট নির্বাচিত টপিক: {data.topic_ids.length}টি (শুধুমাত্র এই টপিকগুলো থেকেই প্রশ্ন আসবে)
                                             </span>
                                         ) : (
-                                            <span>কোনো টপিক টিক না দিলে এই বিষয়ের সব টপিক থেকে প্রশ্ন আসবে।</span>
+                                            <span>টপিক টিক না দিলে নির্বাচিত বিষয়গুলোর সব টপিক থেকে প্রশ্ন আসবে।</span>
                                         )}
                                     </div>
                                 </div>
