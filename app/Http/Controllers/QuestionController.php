@@ -228,6 +228,14 @@ class QuestionController extends Controller
      */
     public function studioChat(Request $request): JsonResponse
     {
+        $rawHistory = $request->input('history');
+        if (is_string($rawHistory)) {
+            $decoded = json_decode($rawHistory, true);
+            if (is_array($decoded)) {
+                $request->merge(['history' => $decoded]);
+            }
+        }
+
         $validated = $request->validate([
             'message' => 'nullable|string',
             'history' => 'nullable|array',
