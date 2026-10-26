@@ -16,7 +16,7 @@ import {
     LogOut,
     Menu,
     ChevronRight,
-    Sparkles,
+    GraduationCap,
     ShieldAlert,
     Target,
     Users,
@@ -45,15 +45,12 @@ export default function AuthenticatedLayout({ header, children }) {
                     href: route('notes.index'),
                     active: route().current('notes.*'),
                     icon: Library,
-                    badge: 'থিওরি',
-                    badgeColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
                 },
                 {
                     name: 'কুইক প্র্যাকটিস',
                     href: route('questions.practice'),
                     active: route().current('questions.practice'),
                     icon: PlayCircle,
-                    badge: 'লাইভ',
                 },
                 {
                     name: 'মক টেস্ট ও পরীক্ষা',
@@ -64,15 +61,13 @@ export default function AuthenticatedLayout({ header, children }) {
             ],
         },
         {
-            group: 'প্রশ্ন ও এআই টুলস',
+            group: 'প্রশ্নব্যাংক ও কালেকশন',
             items: [
                 {
-                    name: 'AI কোশ্চেন স্টুডিও',
+                    name: 'প্রশ্ন আপলোড ও প্রসেসিং',
                     href: route('questions.upload'),
                     active: route().current('questions.upload'),
                     icon: UploadCloud,
-                    badge: 'Gemini',
-                    badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
                 },
                 {
                     name: 'আইটি প্রশ্নব্যাংক',
@@ -83,7 +78,7 @@ export default function AuthenticatedLayout({ header, children }) {
             ],
         },
         {
-            group: 'অ্যানালাইটিক্স',
+            group: 'অ্যানালাইটিক্স ও রিপোর্ট',
             items: [
                 {
                     name: 'ডেইলি ও উইকলি রিপোর্ট',
@@ -94,15 +89,13 @@ export default function AuthenticatedLayout({ header, children }) {
             ],
         },
         {
-            group: 'ম্যানেজমেন্ট',
+            group: 'অ্যাডমিন',
             items: [
                 {
                     name: 'ইউজার ম্যানেজমেন্ট',
                     href: route('users.index'),
                     active: route().current('users.*'),
                     icon: Users,
-                    badge: 'টিম',
-                    badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
                 },
             ],
         },
@@ -128,15 +121,12 @@ export default function AuthenticatedLayout({ header, children }) {
                     {/* Brand Header */}
                     <div className="h-16 px-5 border-b border-slate-800 flex items-center justify-between">
                         <Link href={route('dashboard')} className="flex items-center gap-3 group">
-                            <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-base shadow-sm group-hover:bg-indigo-500 transition">
-                                <Sparkles className="w-5 h-5" />
+                            <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-indigo-400 font-bold text-base shadow-sm group-hover:border-slate-600 transition">
+                                <GraduationCap className="w-5 h-5" />
                             </div>
                             <div className="flex flex-col">
-                                <span className="font-bold text-sm tracking-tight text-white flex items-center gap-1.5">
-                                    <span>PoraChira IT</span>
-                                    <span className="text-[10px] font-semibold uppercase px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                                        PRO
-                                    </span>
+                                <span className="font-bold text-sm tracking-tight text-white">
+                                    PoraChira IT
                                 </span>
                                 <span className="text-[11px] text-slate-400">পরীক্ষার প্রস্তুতি প্ল্যাটফর্ম</span>
                             </div>
@@ -204,14 +194,14 @@ export default function AuthenticatedLayout({ header, children }) {
                                                 href={item.href}
                                                 className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition ${
                                                     isActive
-                                                        ? 'bg-indigo-600 text-white shadow-sm font-semibold'
-                                                        : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+                                                        ? 'bg-slate-800 text-white border border-slate-700/80 font-semibold'
+                                                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                                                 }`}
                                             >
                                                 <div className="flex items-center gap-2.5">
                                                     <Icon
                                                         className={`w-4 h-4 ${
-                                                            isActive ? 'text-white' : 'text-slate-400'
+                                                            isActive ? 'text-indigo-400' : 'text-slate-500'
                                                         }`}
                                                     />
                                                     <span>{item.name}</span>
@@ -221,8 +211,8 @@ export default function AuthenticatedLayout({ header, children }) {
                                                     <span
                                                         className={`text-[9px] font-bold px-1.5 py-0.2 rounded border uppercase ${
                                                             isActive
-                                                                ? 'bg-white/20 text-white border-white/30'
-                                                                : item.badgeColor || 'bg-slate-800 text-slate-300 border-slate-700'
+                                                                ? 'bg-indigo-500/10 text-indigo-300 border-indigo-500/20'
+                                                                : item.badgeColor || 'bg-slate-800 text-slate-400 border-slate-700'
                                                         }`}
                                                     >
                                                         {item.badge}

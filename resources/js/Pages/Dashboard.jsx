@@ -74,8 +74,8 @@ export default function Dashboard({
                             href={route('questions.upload')}
                             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
                         >
-                            <UploadCloud className="w-4 h-4 text-purple-400" />
-                            <span>AI দিয়ে প্রশ্ন যোগ</span>
+                            <UploadCloud className="w-4 h-4 text-slate-400" />
+                            <span>প্রশ্ন যুক্ত করুন</span>
                         </Link>
 
                         <Link

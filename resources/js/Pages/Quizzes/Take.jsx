@@ -76,7 +76,7 @@ export default function Take({ quiz }) {
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                         <div className="flex items-center gap-2 mb-1">
-                            <span className="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 text-xs font-semibold">
+                            <span className="px-2.5 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-slate-300 text-xs font-medium">
                                 {quiz.subject?.name || 'জেনারেল আইটি'}
                             </span>
                             <span className="text-xs text-slate-400">
@@ -91,20 +91,20 @@ export default function Take({ quiz }) {
                     {/* Live Countdown Timer */}
                     <div className="flex items-center gap-3">
                         <div
-                            className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-bold shadow-md transition ${
+                            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg border text-xs sm:text-sm font-semibold transition ${
                                 timeLeft < 120
-                                    ? 'bg-rose-500/20 border-rose-500 text-rose-300 animate-pulse'
-                                    : 'bg-slate-800 border-slate-700 text-cyan-300'
+                                    ? 'bg-rose-500/10 border-rose-500/40 text-rose-300'
+                                    : 'bg-slate-800/80 border-slate-700 text-slate-200'
                             }`}
                         >
-                            <Clock className="w-4 h-4" />
-                            <span>বাকি সময়: {formatTime(timeLeft)}</span>
+                            <Clock className="w-4 h-4 text-slate-400" />
+                            <span>বাকি সময়: <span className="font-mono font-bold text-white">{formatTime(timeLeft)}</span></span>
                         </div>
 
                         <button
                             type="button"
                             onClick={() => setShowConfirmModal(true)}
-                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md transition"
+                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold shadow-sm transition"
                         >
                             <Send className="w-3.5 h-3.5" />
                             <span>সাবমিট করুন</span>
@@ -119,21 +119,21 @@ export default function Take({ quiz }) {
                 {/* Main Question Area */}
                 <div className="lg:col-span-3">
                     {currentQuestion ? (
-                        <div className="p-6 sm:p-8 rounded-2xl bg-slate-800/90 border border-slate-700 shadow-xl mb-6">
-                            <div className="flex justify-between items-center text-xs text-slate-400 mb-4 pb-2 border-b border-slate-700/60">
-                                <div className="flex items-center gap-2">
-                                    <span>
-                                        প্রশ্ন <strong className="text-white text-sm">#{currentIndex + 1}</strong> / {questions.length}
+                        <div className="p-6 sm:p-7 rounded-xl bg-slate-900/80 border border-slate-800 shadow-sm mb-6">
+                            <div className="flex justify-between items-center text-xs text-slate-400 mb-4 pb-2.5 border-b border-slate-800">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="font-medium text-slate-300">
+                                        প্রশ্ন <strong className="text-white text-sm font-bold">#{currentIndex + 1}</strong> / {questions.length}
                                     </span>
                                     {currentQuestion.subject && (
-                                        <span className="px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-[11px] font-semibold">
-                                            📚 {currentQuestion.subject.name}
+                                        <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 text-[11px] font-medium">
+                                            {currentQuestion.subject.name}
                                             {currentQuestion.topic ? ` › ${currentQuestion.topic.name}` : ''}
                                         </span>
                                     )}
                                     {(currentQuestion.exam_name || currentQuestion.year) && (
-                                        <span className="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-semibold">
-                                            🏛 {currentQuestion.exam_name} {currentQuestion.year ? `(${currentQuestion.year})` : ''}
+                                        <span className="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700 text-amber-300/90 text-[11px] font-medium">
+                                            {currentQuestion.exam_name} {currentQuestion.year ? `(${currentQuestion.year})` : ''}
                                         </span>
                                     )}
                                 </div>
@@ -147,19 +147,19 @@ export default function Take({ quiz }) {
                                 )}
                             </div>
 
-                            <h3 className="text-base sm:text-lg font-bold text-white leading-relaxed mb-4">
+                            <h3 className="text-base sm:text-lg font-semibold text-white leading-relaxed mb-5">
                                 {currentQuestion.question_text}
                             </h3>
 
                             {/* Code Snippet */}
                             {currentQuestion.code_snippet && (
-                                <div className="mb-6 p-4 rounded-xl bg-slate-950 border border-slate-700/80 font-mono text-xs sm:text-sm text-emerald-300 overflow-x-auto">
+                                <div className="mb-6 p-4 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs text-slate-200 overflow-x-auto">
                                     <pre>{currentQuestion.code_snippet}</pre>
                                 </div>
                             )}
 
                             {/* Options */}
-                            <div className="space-y-3 mb-6">
+                            <div className="space-y-2.5 mb-6">
                                 {Object.entries(currentQuestion.options || {}).map(([key, val]) => {
                                     const isSelected = answers[currentQuestion.id] === key;
 
@@ -168,48 +168,45 @@ export default function Take({ quiz }) {
                                             key={key}
                                             type="button"
                                             onClick={() => handleSelectOption(currentQuestion.id, key)}
-                                            className={`w-full p-4 rounded-xl border text-left flex items-start gap-3 transition cursor-pointer ${
+                                            className={`w-full p-3.5 rounded-xl border text-left flex items-start gap-3 transition cursor-pointer ${
                                                 isSelected
-                                                    ? 'bg-indigo-600/20 border-indigo-500 text-white font-medium shadow-sm'
-                                                    : 'bg-slate-900/60 border-slate-700 text-slate-300 hover:bg-slate-700/50 hover:border-slate-600'
+                                                    ? 'bg-blue-600/10 border-blue-500 text-white font-medium'
+                                                    : 'bg-slate-950/40 border-slate-800 text-slate-300 hover:bg-slate-800/50 hover:border-slate-700'
                                             }`}
                                         >
                                             <div
-                                                className={`w-7 h-7 rounded-lg text-xs font-bold flex items-center justify-center shrink-0 mt-0.5 ${
+                                                className={`w-6 h-6 rounded-md text-xs font-bold flex items-center justify-center shrink-0 mt-0.5 border ${
                                                     isSelected
-                                                        ? 'bg-indigo-600 text-white'
-                                                        : 'bg-slate-800 text-slate-400'
+                                                        ? 'bg-blue-600 border-blue-500 text-white'
+                                                        : 'bg-slate-800 border-slate-700 text-slate-400'
                                                 }`}
                                             >
                                                 {key}
                                             </div>
-                                            <div className="text-sm flex-1 leading-snug">{val}</div>
-                                            {isSelected && (
-                                                <CheckCircle2 className="w-5 h-5 text-indigo-400 shrink-0" />
-                                            )}
+                                            <div className="text-sm flex-1 leading-normal pt-0.5">{val}</div>
                                         </button>
                                     );
                                 })}
                             </div>
 
                             {/* Prev / Next controls */}
-                            <div className="flex items-center justify-between pt-4 border-t border-slate-700/60">
+                            <div className="flex items-center justify-between pt-4 border-t border-slate-800">
                                 <button
                                     onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
                                     disabled={currentIndex === 0}
-                                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-semibold disabled:opacity-40 transition"
+                                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 disabled:opacity-30 transition"
                                 >
-                                    <ArrowLeft className="w-4 h-4" />
+                                    <ArrowLeft className="w-3.5 h-3.5" />
                                     <span>পূর্ববর্তী</span>
                                 </button>
 
                                 <button
                                     onClick={() => setCurrentIndex((prev) => Math.min(questions.length - 1, prev + 1))}
                                     disabled={currentIndex === questions.length - 1}
-                                    className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold disabled:opacity-40 transition"
+                                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium disabled:opacity-30 transition"
                                 >
                                     <span>পরবর্তী প্রশ্ন</span>
-                                    <ArrowRight className="w-4 h-4" />
+                                    <ArrowRight className="w-3.5 h-3.5" />
                                 </button>
                             </div>
                         </div>
@@ -220,13 +217,13 @@ export default function Take({ quiz }) {
 
                 {/* Question Navigator Palette */}
                 <div className="lg:col-span-1">
-                    <div className="p-5 rounded-2xl bg-slate-800/90 border border-slate-700 shadow-xl sticky top-24">
+                    <div className="p-5 rounded-xl bg-slate-900/80 border border-slate-800 shadow-sm sticky top-24">
                         <div className="flex justify-between items-center mb-3 text-xs font-semibold text-slate-300">
                             <span>প্রশ্ন প্যালেট</span>
-                            <span className="text-emerald-400">উত্তর দেওয়া: {answeredCount}/{questions.length}</span>
+                            <span className="text-slate-400">উত্তর সম্পন্ন: <strong className="text-white">{answeredCount}</strong>/{questions.length}</span>
                         </div>
 
-                        <div className="grid grid-cols-5 gap-2 mb-4">
+                        <div className="grid grid-cols-5 gap-1.5 mb-4">
                             {questions.map((q, idx) => {
                                 const isCurrent = idx === currentIndex;
                                 const isAnswered = !!answers[q.id];
@@ -236,12 +233,12 @@ export default function Take({ quiz }) {
                                         key={q.id}
                                         type="button"
                                         onClick={() => setCurrentIndex(idx)}
-                                        className={`w-full aspect-square rounded-xl text-xs font-bold transition flex items-center justify-center ${
+                                        className={`w-full aspect-square rounded-lg text-xs font-medium transition flex items-center justify-center border ${
                                             isCurrent
-                                                ? 'ring-2 ring-indigo-400 bg-indigo-600 text-white'
+                                                ? 'bg-blue-600 border-blue-500 text-white font-bold'
                                                 : isAnswered
-                                                ? 'bg-emerald-600 text-white'
-                                                : 'bg-slate-900 border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-700'
+                                                ? 'bg-emerald-950/60 border-emerald-600/60 text-emerald-300 font-semibold'
+                                                : 'bg-slate-950/40 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
                                         }`}
                                     >
                                         {idx + 1}
@@ -250,17 +247,17 @@ export default function Take({ quiz }) {
                             })}
                         </div>
 
-                        <div className="space-y-1.5 text-[11px] text-slate-400 pt-3 border-t border-slate-700">
+                        <div className="space-y-1.5 text-[11px] text-slate-400 pt-3 border-t border-slate-800">
                             <div className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded-full bg-emerald-600"></span>
+                                <span className="w-2.5 h-2.5 rounded bg-emerald-600"></span>
                                 <span>উত্তর প্রদান করা হয়েছে</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded-full bg-slate-900 border border-slate-700"></span>
+                                <span className="w-2.5 h-2.5 rounded bg-slate-800 border border-slate-700"></span>
                                 <span>উত্তর বাকি আছে</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded-full bg-indigo-600"></span>
+                                <span className="w-2.5 h-2.5 rounded bg-blue-600"></span>
                                 <span>বর্তমান প্রশ্ন</span>
                             </div>
                         </div>
@@ -268,7 +265,7 @@ export default function Take({ quiz }) {
                         <button
                             type="button"
                             onClick={() => setShowConfirmModal(true)}
-                            className="w-full mt-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md transition"
+                            className="w-full mt-5 py-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold shadow-sm transition"
                         >
                             পরীক্ষা সমাপ্ত ও সাবমিট করুন
                         </button>

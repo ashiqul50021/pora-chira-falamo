@@ -410,10 +410,10 @@ export default function Upload({ subjects }) {
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                         <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-                            <span>প্রশ্ন আপলোড ও এআই স্টুডিও</span>
+                            <span>প্রশ্ন আপলোড ও প্রসেসিং</span>
                         </h1>
                         <p className="text-xs sm:text-sm text-slate-400 mt-1">
-                            ছবি বা বইয়ের টেক্সট থেকে স্বয়ংক্রিয়ভাবে প্রশ্ন বের করুন অথবা সিলেবাস টপিক থেকে নতুন প্রশ্ন তৈরি করুন।
+                            প্রশ্নপত্রের ছবি বা টেক্সট আপলোড করে প্রশ্নব্যাংকে প্রশ্ন যোগ করুন।
                         </p>
                     </div>
 
@@ -441,7 +441,7 @@ export default function Upload({ subjects }) {
                 </div>
             }
         >
-            <Head title="AI স্টুডিও - IT Exam Prep" />
+            <Head title="প্রশ্ন আপলোড - IT Exam Prep" />
 
             {error && (
                 <div className="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 flex items-center gap-2 text-xs">
@@ -458,23 +458,23 @@ export default function Upload({ subjects }) {
                         onClick={() => { setActiveTab('chat'); setError(null); }}
                         className={`flex-1 py-1.5 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
                             activeTab === 'chat'
-                                ? 'bg-indigo-600 text-white shadow-sm'
+                                ? 'bg-slate-800 text-white border border-slate-700 shadow-sm'
                                 : 'text-slate-400 hover:text-white'
                         }`}
                     >
-                        <MessageSquare className="w-3.5 h-3.5 text-amber-300" />
-                        <span>১. এআই চ্যাট স্টুডিও (লাইভ)</span>
+                        <MessageSquare className="w-3.5 h-3.5 text-slate-300" />
+                        <span>১. চ্যাট অ্যাসিস্ট্যান্ট</span>
                     </button>
 
                     <button
                         onClick={() => { setActiveTab('image'); setError(null); }}
                         className={`flex-1 py-1.5 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
                             activeTab === 'image'
-                                ? 'bg-indigo-600 text-white shadow-sm'
+                                ? 'bg-slate-800 text-white border border-slate-700 shadow-sm'
                                 : 'text-slate-400 hover:text-white'
                         }`}
                     >
-                        <ImageIcon className="w-3.5 h-3.5" />
+                        <ImageIcon className="w-3.5 h-3.5 text-slate-300" />
                         <span>২. ছবি আপলোড</span>
                     </button>
 
@@ -482,11 +482,11 @@ export default function Upload({ subjects }) {
                         onClick={() => { setActiveTab('text'); setError(null); }}
                         className={`flex-1 py-1.5 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
                             activeTab === 'text'
-                                ? 'bg-indigo-600 text-white shadow-sm'
+                                ? 'bg-slate-800 text-white border border-slate-700 shadow-sm'
                                 : 'text-slate-400 hover:text-white'
                         }`}
                     >
-                        <FileText className="w-3.5 h-3.5" />
+                        <FileText className="w-3.5 h-3.5 text-slate-300" />
                         <span>৩. টেক্সট পেস্ট</span>
                     </button>
 
@@ -494,11 +494,11 @@ export default function Upload({ subjects }) {
                         onClick={() => { setActiveTab('generate'); setError(null); }}
                         className={`flex-1 py-1.5 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
                             activeTab === 'generate'
-                                ? 'bg-indigo-600 text-white shadow-sm'
+                                ? 'bg-slate-800 text-white border border-slate-700 shadow-sm'
                                 : 'text-slate-400 hover:text-white'
                         }`}
                     >
-                        <Sparkles className="w-3.5 h-3.5" />
+                        <Sparkles className="w-3.5 h-3.5 text-slate-300" />
                         <span>৪. নতুন প্রশ্ন</span>
                     </button>
                 </div>
@@ -509,15 +509,14 @@ export default function Upload({ subjects }) {
                         {/* Chat Messages Container */}
                         <div className="rounded-2xl bg-slate-950/80 border border-slate-800/80 overflow-hidden shadow-inner flex flex-col h-[520px]">
                             {/* Header */}
-                            <div className="px-4 py-3 bg-slate-900/90 border-b border-slate-800/80 flex items-center justify-between">
+                            <div className="px-4 py-3 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
                                 <div className="flex items-center gap-2.5">
-                                    <div className="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center">
+                                    <div className="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 flex items-center justify-center">
                                         <Bot className="w-4 h-4" />
                                     </div>
                                     <div>
-                                        <h3 className="text-xs font-bold text-white flex items-center gap-1.5">
-                                            <span>Gemini Vision Chat Studio</span>
-                                            <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                        <h3 className="text-xs font-semibold text-white flex items-center gap-1.5">
+                                            <span>প্রশ্ন অ্যানালাইসিস চ্যাট</span>
                                         </h3>
                                         <p className="text-[10px] text-slate-400">
                                             ছবি ড্রপ করুন বা পেস্ট করুন, প্রশ্ন নিয়ে সরাসরি কথোপকথন ও এক ক্লিকে সেভ করুন
