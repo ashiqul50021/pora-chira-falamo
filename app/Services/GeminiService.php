@@ -174,7 +174,7 @@ class GeminiService
         // fallback to standard text extraction
         if ($jsonResponse && trim($rawText) === '') {
             Log::warning('Gemini returned empty text in JSON mode, triggering fallback to standard text prompt.');
-            unset($payload['generationConfig']['responseMimeType']);
+            unset($payload['generationConfig']);
             $fallbackResponse = $this->sendRequest($payload);
             $rawText = $this->extractTextFromResponse($fallbackResponse);
 
