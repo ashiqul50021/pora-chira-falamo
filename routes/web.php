@@ -78,6 +78,16 @@ Route::match(['get', 'post'], '/git-deploy-webhook', function (Request $request)
     }
 
     $basePath = base_path();
+
+    if (! function_exists('shell_exec') && ! function_exists('exec')) {
+        // If shell execution is disabled on cPanel/shared hosting, redirect or guide to update.php
+        return response('<pre style="background:#0b0f17;color:#f87171;padding:20px;font-family:monospace;border-radius:10px;">'
+            ."⚠️ shell_exec() is disabled on this server by PHP disable_functions security policy.\n"
+            ."👉 Please use the zip updater instead:\n"
+            ."<a href='/update.php' style='color:#38bdf8;font-weight:bold;'>https://poira-chira-falamo.ashiqulislamrasel.com/update.php</a>"
+            .'</pre>');
+    }
+
     $commands = [
         "cd {$basePath} && git pull origin master 2>&1",
         "cd {$basePath} && php artisan optimize:clear 2>&1",
@@ -86,7 +96,13 @@ Route::match(['get', 'post'], '/git-deploy-webhook', function (Request $request)
 
     $log = [];
     foreach ($commands as $cmd) {
-        $output = @shell_exec($cmd);
+        $output = '';
+        if (function_exists('shell_exec')) {
+            $output = shell_exec($cmd);
+        } elseif (function_exists('exec')) {
+            exec($cmd, $lines);
+            $output = implode("\n", $lines);
+        }
         $log[] = "COMMAND: {$cmd}\nOUTPUT:\n".($output ?: '(executed / no direct shell output)');
     }
 
