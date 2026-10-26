@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Exception;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -220,13 +221,17 @@ class GeminiService
     }
 
     /**
-     * Send HTTP POST request to Google Gemini API.
+     * Send HTTP POST request to Google Gemini API with automatic retry on transient errors (e.g. 503 / 429).
      */
     protected function sendRequest(array $payload): Response
     {
         $url = sprintf('%s/models/%s:generateContent?key=%s', $this->baseUrl, $this->model, $this->apiKey);
 
         $response = Http::timeout(90)
+            ->retry(3, 2000, function (Exception $exception, $request) {
+                return $exception instanceof RequestException
+                    && in_array($exception->response?->status(), [429, 500, 503, 504]);
+            }, throw: false)
             ->withHeaders([
                 'Content-Type' => 'application/json',
             ])
