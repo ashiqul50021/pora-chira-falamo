@@ -6,6 +6,7 @@ use App\Models\PracticeLog;
 use App\Models\Question;
 use App\Models\Subject;
 use App\Models\Topic;
+use App\Services\GeminiService;
 use App\Services\QuestionService;
 use App\Services\StreakService;
 use Illuminate\Http\JsonResponse;
@@ -19,7 +20,8 @@ class QuestionController extends Controller
 {
     public function __construct(
         protected QuestionService $questionService,
-        protected StreakService $streakService
+        protected StreakService $streakService,
+        protected GeminiService $gemini
     ) {}
 
     /**
