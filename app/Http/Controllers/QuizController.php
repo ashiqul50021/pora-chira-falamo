@@ -52,8 +52,17 @@ class QuizController extends Controller
      */
     public function create(): Response
     {
-        $subjects = Subject::with('topics')->get();
-        $totalQuestions = Question::count();
+        $subjects = Subject::with(['topics' => function ($query) {
+            $query->withCount(['questions' => function ($q) {
+                $q->where('type', 'mcq');
+            }]);
+        }])
+            ->withCount(['questions' => function ($q) {
+                $q->where('type', 'mcq');
+            }])
+            ->get();
+
+        $totalQuestions = Question::where('type', 'mcq')->count();
 
         // Get distinct exam names and years available in question bank (for MCQ questions)
         $availableExams = Question::where('type', 'mcq')

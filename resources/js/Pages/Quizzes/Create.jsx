@@ -231,7 +231,14 @@ export default function Create({
                                                         : 'bg-slate-950/40 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
                                                 }`}
                                             >
-                                                <span className="truncate pr-2 font-medium">{sub.name}</span>
+                                                <span className="truncate pr-2 font-medium">
+                                                    {sub.name}
+                                                    {typeof sub.questions_count !== 'undefined' && (
+                                                        <span className={`ml-1 text-[10px] ${sub.questions_count > 0 ? 'text-emerald-400 font-semibold' : 'text-slate-500'}`}>
+                                                            ({sub.questions_count} MCQ)
+                                                        </span>
+                                                    )}
+                                                </span>
                                                 <div
                                                     className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border transition ${
                                                         isSelected
@@ -290,8 +297,13 @@ export default function Create({
                                                     }`}
                                                 >
                                                     <div className="min-w-0 pr-2">
-                                                        <div className="text-[11px] font-semibold text-white truncate">
-                                                            {topic.name}
+                                                        <div className="text-[11px] font-semibold text-white truncate flex items-center gap-1.5">
+                                                            <span className="truncate">{topic.name}</span>
+                                                            {typeof topic.questions_count !== 'undefined' && (
+                                                                <span className={`text-[9px] px-1 rounded ${topic.questions_count > 0 ? 'bg-emerald-500/20 text-emerald-400 font-bold' : 'bg-slate-800 text-slate-500'}`}>
+                                                                    {topic.questions_count} MCQ
+                                                                </span>
+                                                            )}
                                                         </div>
                                                         <div className="text-[9px] text-slate-500 truncate">
                                                             {topic.subject_name}
