@@ -6,6 +6,7 @@ use Exception;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 class GeminiService
@@ -163,12 +164,24 @@ class GeminiService
         $response = $this->sendRequest($payload);
         $rawText = $this->extractTextFromResponse($response);
 
+        Log::info('Gemini image extraction raw response', [
+            'raw_length' => strlen($rawText),
+            'raw_text_preview' => mb_substr($rawText, 0, 1500),
+            'json_mode' => $jsonResponse,
+        ]);
+
         // If JSON mode returned empty text (rare Gemini edge-case with complex multimodal prompts),
         // fallback to standard text extraction
         if ($jsonResponse && trim($rawText) === '') {
+            Log::warning('Gemini returned empty text in JSON mode, triggering fallback to standard text prompt.');
             unset($payload['generationConfig']['responseMimeType']);
             $fallbackResponse = $this->sendRequest($payload);
             $rawText = $this->extractTextFromResponse($fallbackResponse);
+
+            Log::info('Gemini image extraction fallback raw response', [
+                'raw_length' => strlen($rawText),
+                'raw_text_preview' => mb_substr($rawText, 0, 1500),
+            ]);
         }
 
         if ($jsonResponse) {
