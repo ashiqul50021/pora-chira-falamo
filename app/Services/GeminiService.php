@@ -163,6 +163,14 @@ class GeminiService
         $response = $this->sendRequest($payload);
         $rawText = $this->extractTextFromResponse($response);
 
+        // If JSON mode returned empty text (rare Gemini edge-case with complex multimodal prompts),
+        // fallback to standard text extraction
+        if ($jsonResponse && trim($rawText) === '') {
+            unset($payload['generationConfig']['responseMimeType']);
+            $fallbackResponse = $this->sendRequest($payload);
+            $rawText = $this->extractTextFromResponse($fallbackResponse);
+        }
+
         if ($jsonResponse) {
             $cleanText = $this->cleanJsonString($rawText);
             $decoded = json_decode($cleanText, true);
