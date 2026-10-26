@@ -253,6 +253,17 @@ class QuizController extends Controller
     }
 
     /**
+     * Delete a quiz and its associated data.
+     */
+    public function destroy(Quiz $quiz): RedirectResponse
+    {
+        $quiz->delete();
+
+        return redirect()->route('quizzes.index')
+            ->with('success', 'মক টেস্টটি সফলভাবে মুছে ফেলা হয়েছে।');
+    }
+
+    /**
      * Display detailed quiz result and answer reviews.
      */
     public function result(QuizAttempt $attempt): Response

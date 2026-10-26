@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
     FileText,
     Plus,
@@ -9,10 +9,18 @@ import {
     PlayCircle,
     ArrowRight,
     HelpCircle,
-    Flame
+    Flame,
+    Trash2
 } from 'lucide-react';
 
 export default function Index({ quizzes, recentAttempts, subjects }) {
+    const handleDeleteQuiz = (quizId, quizTitle) => {
+        if (confirm(`আপনি কি নিশ্চিত যে "${quizTitle}" মক টেস্টটি মুছে ফেলতে চান?`)) {
+            router.delete(route('quizzes.destroy', quizId), {
+                preserveScroll: true,
+            });
+        }
+    };
     return (
         <AuthenticatedLayout
             header={
@@ -91,13 +99,23 @@ export default function Index({ quizzes, recentAttempts, subjects }) {
                                     <span className="text-slate-400 font-medium">
                                         {quiz.questions_count} টি প্রশ্ন • {quiz.total_marks} নম্বর
                                     </span>
-                                    <Link
-                                        href={route('quizzes.show', quiz.id)}
-                                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition shadow-sm"
-                                    >
-                                        <PlayCircle className="w-3.5 h-3.5" />
-                                        <span>শুরু করুন</span>
-                                    </Link>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDeleteQuiz(quiz.id, quiz.title)}
+                                            title="মক টেস্ট মুছে ফেলুন"
+                                            className="p-1.5 rounded-lg bg-slate-700/60 hover:bg-rose-600/20 text-slate-400 hover:text-rose-400 transition"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                        <Link
+                                            href={route('quizzes.show', quiz.id)}
+                                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition shadow-sm"
+                                        >
+                                            <PlayCircle className="w-3.5 h-3.5" />
+                                            <span>শুরু করুন</span>
+                                        </Link>
+                                    </div>
                                 </div>
                             </div>
                         ))}
