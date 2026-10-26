@@ -125,6 +125,12 @@ export default function Take({ quiz }) {
                                     <span>
                                         প্রশ্ন <strong className="text-white text-sm">#{currentIndex + 1}</strong> / {questions.length}
                                     </span>
+                                    {currentQuestion.subject && (
+                                        <span className="px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-[11px] font-semibold">
+                                            📚 {currentQuestion.subject.name}
+                                            {currentQuestion.topic ? ` › ${currentQuestion.topic.name}` : ''}
+                                        </span>
+                                    )}
                                     {(currentQuestion.exam_name || currentQuestion.year) && (
                                         <span className="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-semibold">
                                             🏛 {currentQuestion.exam_name} {currentQuestion.year ? `(${currentQuestion.year})` : ''}

@@ -168,7 +168,7 @@ class QuizController extends Controller
      */
     public function show(Quiz $quiz): Response
     {
-        $quiz->load(['subject', 'topic', 'questions']);
+        $quiz->load(['subject', 'topic', 'questions.subject', 'questions.topic']);
 
         return Inertia::render('Quizzes/Take', [
             'quiz' => $quiz,
