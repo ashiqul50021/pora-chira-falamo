@@ -55,9 +55,26 @@ class QuizController extends Controller
         $subjects = Subject::with('topics')->get();
         $totalQuestions = Question::count();
 
+        // Get distinct exam names and years available in question bank
+        $availableExams = Question::whereNotNull('exam_name')
+            ->where('exam_name', '!=', '')
+            ->select('exam_name')
+            ->selectRaw('count(*) as count')
+            ->groupBy('exam_name')
+            ->orderByDesc('count')
+            ->get();
+
+        $availableYears = Question::whereNotNull('year')
+            ->where('year', '!=', '')
+            ->distinct()
+            ->orderByDesc('year')
+            ->pluck('year');
+
         return Inertia::render('Quizzes/Create', [
             'subjects' => $subjects,
             'totalAvailableQuestions' => $totalQuestions,
+            'availableExams' => $availableExams,
+            'availableYears' => $availableYears,
         ]);
     }
 
@@ -68,10 +85,15 @@ class QuizController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:200',
+            'creation_mode' => 'nullable|string|in:syllabus,exam',
             'subject_id' => 'nullable|exists:subjects,id',
             'topic_id' => 'nullable|exists:topics,id',
+            'topic_ids' => 'nullable|array',
+            'topic_ids.*' => 'integer|exists:topics,id',
+            'exam_name' => 'nullable|string|max:150',
+            'year' => 'nullable|string|max:20',
             'type' => 'required|in:practice,mock',
-            'question_count' => 'required|integer|min:3|max:50',
+            'question_count' => 'required|integer|min:3|max:100',
             'duration_minutes' => 'required|integer|min:1|max:180',
             'negative_marking' => 'required|numeric|min:0|max:1',
             'description' => 'nullable|string',
@@ -79,25 +101,41 @@ class QuizController extends Controller
 
         $query = Question::query()->where('type', 'mcq');
 
-        if (! empty($validated['subject_id'])) {
-            $query->where('subject_id', $validated['subject_id']);
-        }
-        if (! empty($validated['topic_id'])) {
-            $query->where('topic_id', $validated['topic_id']);
+        // Mode 1: Real Job Exam Based
+        if (($validated['creation_mode'] ?? 'syllabus') === 'exam' && ! empty($validated['exam_name'])) {
+            $query->where('exam_name', $validated['exam_name']);
+            if (! empty($validated['year'])) {
+                $query->where('year', $validated['year']);
+            }
+        } else {
+            // Mode 2: Syllabus / Subject & Multiple Topics
+            if (! empty($validated['subject_id'])) {
+                $query->where('subject_id', $validated['subject_id']);
+            }
+
+            if (! empty($validated['topic_ids']) && is_array($validated['topic_ids'])) {
+                $query->whereIn('topic_id', $validated['topic_ids']);
+            } elseif (! empty($validated['topic_id'])) {
+                $query->where('topic_id', $validated['topic_id']);
+            }
         }
 
         $questions = $query->inRandomOrder()->take($validated['question_count'])->get();
 
         if ($questions->count() < 3) {
             return redirect()->back()->withErrors([
-                'question_count' => 'এই বিষয়ের অধীনে পর্যাপ্ত প্রশ্ন পাওয়া যায়নি। অনুগ্রহ করে আরও কিছু প্রশ্ন যোগ করুন বা অন্য বিষয় বাছাই করুন।',
+                'question_count' => 'আপনার নির্বাচিত ফিল্টারের অধীনে পর্যাপ্ত প্রশ্ন (কমপক্ষে ৩টি) পাওয়া যায়নি। অন্য টপিক বা পরীক্ষা বাছাই করুন।',
             ]);
         }
+
+        $firstTopicId = ! empty($validated['topic_ids']) && is_array($validated['topic_ids'])
+            ? $validated['topic_ids'][0]
+            : ($validated['topic_id'] ?? null);
 
         $quiz = Quiz::create([
             'user_id' => $request->user()->id,
             'subject_id' => $validated['subject_id'] ?? null,
-            'topic_id' => $validated['topic_id'] ?? null,
+            'topic_id' => $firstTopicId,
             'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
             'type' => $validated['type'],
