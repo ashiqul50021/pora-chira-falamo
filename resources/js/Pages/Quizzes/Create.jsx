@@ -282,7 +282,7 @@ export default function Create({
                                         <option value="">পরীক্ষা নির্বাচন করুন...</option>
                                         {availableExams.map((ex, idx) => (
                                             <option key={idx} value={ex.exam_name}>
-                                                {ex.exam_name} ({ex.count}টি প্রশ্ন উপলব্ধ)
+                                                {ex.exam_name} ({ex.count}টি MCQ প্রশ্ন উপলব্ধ)
                                             </option>
                                         ))}
                                     </select>

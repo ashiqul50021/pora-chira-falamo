@@ -55,8 +55,9 @@ class QuizController extends Controller
         $subjects = Subject::with('topics')->get();
         $totalQuestions = Question::count();
 
-        // Get distinct exam names and years available in question bank
-        $availableExams = Question::whereNotNull('exam_name')
+        // Get distinct exam names and years available in question bank (for MCQ questions)
+        $availableExams = Question::where('type', 'mcq')
+            ->whereNotNull('exam_name')
             ->where('exam_name', '!=', '')
             ->select('exam_name')
             ->selectRaw('count(*) as count')
@@ -64,7 +65,8 @@ class QuizController extends Controller
             ->orderByDesc('count')
             ->get();
 
-        $availableYears = Question::whereNotNull('year')
+        $availableYears = Question::where('type', 'mcq')
+            ->whereNotNull('year')
             ->where('year', '!=', '')
             ->distinct()
             ->orderByDesc('year')
@@ -103,9 +105,9 @@ class QuizController extends Controller
 
         // Mode 1: Real Job Exam Based
         if (($validated['creation_mode'] ?? 'syllabus') === 'exam' && ! empty($validated['exam_name'])) {
-            $query->where('exam_name', $validated['exam_name']);
+            $query->where('exam_name', 'LIKE', '%'.trim($validated['exam_name']).'%');
             if (! empty($validated['year'])) {
-                $query->where('year', $validated['year']);
+                $query->where('year', trim($validated['year']));
             }
         } else {
             // Mode 2: Syllabus / Subject & Multiple Topics
