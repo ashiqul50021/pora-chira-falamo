@@ -32,7 +32,7 @@ class QuizController extends Controller
             ->latest()
             ->paginate(9);
 
-        $recentAttempts = QuizAttempt::with('quiz.subject')
+        $recentAttempts = QuizAttempt::with(['quiz.subject', 'answers.question:id,type'])
             ->where('user_id', $user->id)
             ->latest()
             ->take(8)
@@ -53,33 +53,37 @@ class QuizController extends Controller
     public function create(): Response
     {
         $subjects = Subject::with(['topics' => function ($query) {
-            $query->withCount(['questions' => function ($q) {
+            $query->withCount(['questions as mcq_questions_count' => function ($q) {
                 $q->where('type', 'mcq');
+            }, 'questions as written_questions_count' => function ($q) {
+                $q->where('type', 'written');
             }]);
         }])
-            ->withCount(['questions' => function ($q) {
+            ->withCount(['questions as mcq_questions_count' => function ($q) {
                 $q->where('type', 'mcq');
+            }, 'questions as written_questions_count' => function ($q) {
+                $q->where('type', 'written');
             }])
             ->get();
 
-        $totalQuestions = Question::where('type', 'mcq')->count();
+        $totalQuestions = Question::whereIn('type', ['mcq', 'written'])->count();
 
-        // Get distinct exam names and years available in question bank (for MCQ questions)
-        $availableExams = Question::where('type', 'mcq')
+        $availableExams = Question::whereIn('type', ['mcq', 'written'])
             ->whereNotNull('exam_name')
             ->where('exam_name', '!=', '')
-            ->select('exam_name')
+            ->select('type', 'exam_name')
             ->selectRaw('count(*) as count')
-            ->groupBy('exam_name')
+            ->groupBy('type', 'exam_name')
             ->orderByDesc('count')
             ->get();
 
-        $availableYears = Question::where('type', 'mcq')
+        $availableYears = Question::whereIn('type', ['mcq', 'written'])
             ->whereNotNull('year')
             ->where('year', '!=', '')
+            ->select('type', 'year')
             ->distinct()
             ->orderByDesc('year')
-            ->pluck('year');
+            ->get();
 
         return Inertia::render('Quizzes/Create', [
             'subjects' => $subjects,
@@ -106,13 +110,14 @@ class QuizController extends Controller
             'exam_name' => 'nullable|string|max:150',
             'year' => 'nullable|string|max:20',
             'type' => 'required|in:practice,mock',
+            'question_type' => 'required|in:mcq,written',
             'question_count' => 'required|integer|min:3|max:100',
             'duration_minutes' => 'required|integer|min:1|max:180',
             'negative_marking' => 'required|numeric|min:0|max:1',
             'description' => 'nullable|string',
         ]);
 
-        $query = Question::query()->where('type', 'mcq');
+        $query = Question::query()->where('type', $validated['question_type']);
 
         // Mode 1: Real Job Exam Based
         if (($validated['creation_mode'] ?? 'syllabus') === 'exam' && ! empty($validated['exam_name'])) {
@@ -157,7 +162,9 @@ class QuizController extends Controller
             'description' => $validated['description'] ?? null,
             'type' => $validated['type'],
             'duration_minutes' => $validated['duration_minutes'],
-            'total_marks' => $questions->count(),
+            'total_marks' => $validated['question_type'] === 'written'
+                ? $questions->sum(fn (Question $question): int => $question->marks ?? 5)
+                : $questions->count(),
             'negative_marking' => $validated['negative_marking'],
         ]);
 
@@ -191,6 +198,7 @@ class QuizController extends Controller
     {
         $validated = $request->validate([
             'answers' => 'required|array',
+            'answers.*' => 'nullable|string|max:10000',
             'time_spent_seconds' => 'required|integer|min:0',
         ]);
 
@@ -206,26 +214,31 @@ class QuizController extends Controller
 
         foreach ($quiz->questions as $question) {
             $selected = $userAnswers[$question->id] ?? null;
+            $isWritten = $question->type === 'written';
 
             if ($selected !== null && $selected !== '') {
                 $answeredCount++;
-                $isCorrect = (strtoupper((string) $selected) === strtoupper((string) $question->correct_option));
+                $isCorrect = ! $isWritten && strtoupper((string) $selected) === strtoupper((string) $question->correct_option);
 
-                if ($isCorrect) {
-                    $correctCount++;
-                } else {
-                    $wrongCount++;
+                if (! $isWritten) {
+                    if ($isCorrect) {
+                        $correctCount++;
+                    } else {
+                        $wrongCount++;
+                    }
                 }
 
                 $attemptAnswers[] = [
                     'question_id' => $question->id,
-                    'selected_option' => $selected,
+                    'selected_option' => $isWritten ? null : $selected,
+                    'written_response' => $isWritten ? $selected : null,
                     'is_correct' => $isCorrect,
                 ];
             } else {
                 $attemptAnswers[] = [
                     'question_id' => $question->id,
                     'selected_option' => null,
+                    'written_response' => null,
                     'is_correct' => false,
                 ];
             }
@@ -234,7 +247,8 @@ class QuizController extends Controller
         $negativeMark = (float) $quiz->negative_marking;
         $totalScore = max(0, $correctCount - ($wrongCount * $negativeMark));
         $totalQuestions = $quiz->questions->count();
-        $accuracyRate = $totalQuestions > 0 ? round(($correctCount / $totalQuestions) * 100, 2) : 0;
+        $gradedQuestionCount = $quiz->questions->where('type', 'mcq')->count();
+        $accuracyRate = $gradedQuestionCount > 0 ? round(($correctCount / $gradedQuestionCount) * 100, 2) : 0;
 
         $attempt = QuizAttempt::create([
             'user_id' => $user->id,

@@ -16,6 +16,7 @@ class QuizAttemptAnswer extends Model
         'quiz_attempt_id',
         'question_id',
         'selected_option',
+        'written_response',
         'is_correct',
     ];
 

@@ -34,6 +34,7 @@ export default function Create({
         exam_name: '',
         year: '',
         type: 'mock',
+        question_type: 'mcq',
         question_count: 10,
         duration_minutes: 15,
         negative_marking: 0.25,
@@ -136,16 +137,16 @@ export default function Create({
                     <div>
                         <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
                             <Plus className="w-6 h-6 text-cyan-400" />
-                            <span>নতুন কাস্টম মক টেস্ট তৈরি করুন</span>
+                            <span>নতুন কাস্টম পরীক্ষা তৈরি করুন</span>
                         </h1>
                         <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-                            এক বা একাধিক বিষয় ও টপিক নির্বাচন করুন অথবা বিগত বছরের আসল পরীক্ষা ও সাল ভিত্তিক প্রশ্ন নিয়ে টেস্ট সাজান।
+                            প্রশ্নের ধরন ও সংখ্যা বেছে বিষয়, টপিক বা বিগত বছরের প্রশ্ন দিয়ে পরীক্ষা তৈরি করুন।
                         </p>
                     </div>
                 </div>
             }
         >
-            <Head title="মক টেস্ট তৈরি - IT Exam Prep" />
+            <Head title="কাস্টম পরীক্ষা তৈরি - IT Exam Prep" />
 
             <div className="max-w-3xl mx-auto">
                 {/* Mode Selector Tabs */}
@@ -181,10 +182,32 @@ export default function Create({
                     onSubmit={handleSubmit}
                     className="p-6 sm:p-8 rounded-2xl bg-slate-800/90 border border-slate-700 shadow-xl space-y-6"
                 >
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                            প্রশ্নের ধরন:
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setData((prev) => ({ ...prev, question_type: 'mcq', negative_marking: 0.25 }))}
+                                className={`px-3 py-2.5 rounded-lg border text-xs font-semibold transition ${data.question_type === 'mcq' ? 'bg-cyan-600/20 border-cyan-500 text-white' : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white'}`}
+                            >
+                                MCQ পরীক্ষা
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setData((prev) => ({ ...prev, question_type: 'written', negative_marking: 0 }))}
+                                className={`px-3 py-2.5 rounded-lg border text-xs font-semibold transition ${data.question_type === 'written' ? 'bg-emerald-600/20 border-emerald-500 text-white' : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white'}`}
+                            >
+                                লিখিত পরীক্ষা
+                            </button>
+                        </div>
+                    </div>
+
                     {/* Title */}
                     <div>
                         <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                            মক টেস্টের শিরোনাম:
+                            পরীক্ষার শিরোনাম:
                         </label>
                         <input
                             type="text"
@@ -233,9 +256,9 @@ export default function Create({
                                             >
                                                 <span className="truncate pr-2 font-medium">
                                                     {sub.name}
-                                                    {typeof sub.questions_count !== 'undefined' && (
-                                                        <span className={`ml-1 text-[10px] ${sub.questions_count > 0 ? 'text-emerald-400 font-semibold' : 'text-slate-500'}`}>
-                                                            ({sub.questions_count} MCQ)
+                                                    {typeof sub[`${data.question_type}_questions_count`] !== 'undefined' && (
+                                                        <span className={`ml-1 text-[10px] ${sub[`${data.question_type}_questions_count`] > 0 ? 'text-emerald-400 font-semibold' : 'text-slate-500'}`}>
+                                                            ({sub[`${data.question_type}_questions_count`]} {data.question_type === 'written' ? 'লিখিত' : 'MCQ'})
                                                         </span>
                                                     )}
                                                 </span>
@@ -299,9 +322,9 @@ export default function Create({
                                                     <div className="min-w-0 pr-2">
                                                         <div className="text-[11px] font-semibold text-white truncate flex items-center gap-1.5">
                                                             <span className="truncate">{topic.name}</span>
-                                                            {typeof topic.questions_count !== 'undefined' && (
-                                                                <span className={`text-[9px] px-1 rounded ${topic.questions_count > 0 ? 'bg-emerald-500/20 text-emerald-400 font-bold' : 'bg-slate-800 text-slate-500'}`}>
-                                                                    {topic.questions_count} MCQ
+                                                            {typeof topic[`${data.question_type}_questions_count`] !== 'undefined' && (
+                                                                <span className={`text-[9px] px-1 rounded ${topic[`${data.question_type}_questions_count`] > 0 ? 'bg-emerald-500/20 text-emerald-400 font-bold' : 'bg-slate-800 text-slate-500'}`}>
+                                                                    {topic[`${data.question_type}_questions_count`]} {data.question_type === 'written' ? 'লিখিত' : 'MCQ'}
                                                                 </span>
                                                             )}
                                                         </div>
@@ -365,9 +388,9 @@ export default function Create({
                                         required={creationMode === 'exam'}
                                     >
                                         <option value="">পরীক্ষা নির্বাচন করুন...</option>
-                                        {availableExams.map((ex, idx) => (
+                                        {availableExams.filter((exam) => exam.type === data.question_type).map((ex, idx) => (
                                             <option key={idx} value={ex.exam_name}>
-                                                {ex.exam_name} ({ex.count}টি MCQ প্রশ্ন উপলব্ধ)
+                                                {ex.exam_name} ({ex.count}টি {data.question_type === 'written' ? 'লিখিত' : 'MCQ'} প্রশ্ন উপলব্ধ)
                                             </option>
                                         ))}
                                     </select>
@@ -384,39 +407,36 @@ export default function Create({
                                         className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-emerald-500 font-medium"
                                     >
                                         <option value="">সব সাল মিলিয়ে</option>
-                                        {availableYears.map((yr, idx) => (
-                                            <option key={idx} value={yr}>
-                                                {yr} সাল
+                                        {availableYears.filter((year) => year.type === data.question_type).map((year, idx) => (
+                                            <option key={`${year.type}-${year.year}-${idx}`} value={year.year}>
+                                                {year.year} সাল
                                             </option>
                                         ))}
                                     </select>
                                 </div>
                             </div>
                             <p className="text-[11px] text-slate-400 leading-relaxed">
-                                নির্বাচিত পরীক্ষা এবং সালের সংরক্ষিত আসল প্রশ্নগুলো নিয়ে একটি সম্পূর্ণ টাইমড মক টেস্ট তৈরি হবে।
+                                নির্বাচিত পরীক্ষা ও সালের {data.question_type === 'written' ? 'লিখিত' : 'MCQ'} প্রশ্নগুলো নিয়ে টাইমড পরীক্ষা তৈরি হবে।
                             </p>
                         </div>
                     )}
 
                     {/* Question Count & Duration & Negative Marking */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className={`grid grid-cols-1 ${data.question_type === 'written' ? 'sm:grid-cols-2' : 'sm:grid-cols-3'} gap-4`}>
                         <div>
                             <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                                 প্রশ্নের সংখ্যা:
                             </label>
-                            <select
+                            <input
+                                type="number"
+                                min="3"
+                                max="100"
                                 value={data.question_count}
                                 onChange={(e) => setData('question_count', Number(e.target.value))}
                                 className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-cyan-500"
-                            >
-                                <option value={5}>৫টি প্রশ্ন</option>
-                                <option value={10}>১০টি প্রশ্ন</option>
-                                <option value={15}>১৫টি প্রশ্ন</option>
-                                <option value={20}>২০টি প্রশ্ন</option>
-                                <option value={25}>২৫টি প্রশ্ন</option>
-                                <option value={30}>৩০টি প্রশ্ন</option>
-                                <option value={50}>৫০টি প্রশ্ন (ফুল টেস্ট)</option>
-                            </select>
+                                required
+                            />
+                            <p className="text-[10px] text-slate-500 mt-1">৩ থেকে ১০০টি প্রশ্ন</p>
                             {errors.question_count && (
                                 <p className="text-xs text-rose-400 mt-1">{errors.question_count}</p>
                             )}
@@ -436,9 +456,9 @@ export default function Create({
                                 className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-cyan-500"
                                 required
                             />
-                        </div>
+                        </div>}
 
-                        <div>
+                        {data.question_type === 'mcq' && <div>
                             <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1">
                                 <ShieldCheck className="w-3.5 h-3.5 text-rose-400" />
                                 <span>নেগেটিভ মার্কিং:</span>
@@ -452,7 +472,7 @@ export default function Create({
                                 <option value={0.5}>০.৫০ (কঠোর)</option>
                                 <option value={0.0}>০.০০ (কোনো নেগেটিভ মার্কিং নেই)</option>
                             </select>
-                        </div>
+                        </div>}
                     </div>
 
                     {/* Description */}
@@ -481,7 +501,7 @@ export default function Create({
                             className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-cyan-500/20 transition disabled:opacity-50"
                         >
                             <Sparkles className="w-4 h-4 text-amber-300" />
-                            <span>মক টেস্ট শুরু করুন</span>
+                            <span>পরীক্ষা তৈরি করুন</span>
                         </button>
                     </div>
                 </form>

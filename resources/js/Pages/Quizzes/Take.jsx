@@ -49,6 +49,19 @@ export default function Take({ quiz }) {
         }));
     };
 
+    const handleWrittenAnswer = (questionId, answer) => {
+        setAnswers((prev) => {
+            const updated = { ...prev };
+            if (answer.trim() === '') {
+                delete updated[questionId];
+            } else {
+                updated[questionId] = answer;
+            }
+
+            return updated;
+        });
+    };
+
     const handleClearAnswer = (questionId) => {
         const updated = { ...answers };
         delete updated[questionId];
@@ -79,9 +92,11 @@ export default function Take({ quiz }) {
                             <span className="px-2.5 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-slate-300 text-xs font-medium">
                                 {quiz.subject?.name || 'জেনারেল আইটি'}
                             </span>
-                            <span className="text-xs text-slate-400">
-                                • নেগেটিভ মার্কিং: -{quiz.negative_marking}
-                            </span>
+                            {questions[0]?.type === 'mcq' && (
+                                <span className="text-xs text-slate-400">
+                                    • নেগেটিভ মার্কিং: -{quiz.negative_marking}
+                                </span>
+                            )}
                         </div>
                         <h1 className="text-xl font-bold tracking-tight text-white">
                             {quiz.title}
@@ -158,7 +173,26 @@ export default function Take({ quiz }) {
                                 </div>
                             )}
 
-                            {/* Options */}
+                            {currentQuestion.type === 'written' ? (
+                                <div className="mb-6">
+                                    <label htmlFor={`answer-${currentQuestion.id}`} className="block text-xs font-semibold text-slate-300 mb-2">
+                                        আপনার উত্তর:
+                                    </label>
+                                    <textarea
+                                        id={`answer-${currentQuestion.id}`}
+                                        rows={8}
+                                        maxLength={10000}
+                                        value={answers[currentQuestion.id] || ''}
+                                        onChange={(event) => handleWrittenAnswer(currentQuestion.id, event.target.value)}
+                                        placeholder="এখানে আপনার উত্তর লিখুন..."
+                                        className="w-full rounded-lg bg-slate-950 border border-slate-700 text-slate-100 text-sm p-3 focus:outline-none focus:border-emerald-500"
+                                    />
+                                    <p className="text-[10px] text-slate-500 text-right mt-1">
+                                        {(answers[currentQuestion.id] || '').length}/১০,০০০
+                                    </p>
+                                </div>
+                            ) : (
+                            /* Options */
                             <div className="space-y-2.5 mb-6">
                                 {Object.entries(currentQuestion.options || {}).map(([key, val]) => {
                                     const isSelected = answers[currentQuestion.id] === key;
@@ -188,6 +222,7 @@ export default function Take({ quiz }) {
                                     );
                                 })}
                             </div>
+                            )}
 
                             {/* Prev / Next controls */}
                             <div className="flex items-center justify-between pt-4 border-t border-slate-800">

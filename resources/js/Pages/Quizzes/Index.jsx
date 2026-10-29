@@ -138,13 +138,16 @@ export default function Index({ quizzes, recentAttempts, subjects }) {
                                     <th className="px-5 py-3">মক টেস্টের নাম</th>
                                     <th className="px-5 py-3">তারিখ</th>
                                     <th className="px-5 py-3">সঠিক / মোট</th>
-                                    <th className="px-5 py-3">অ্যাকুরেসি</th>
+                                    <th className="px-5 py-3">অ্যাকুরেসি / মূল্যায়ন</th>
                                     <th className="px-5 py-3">প্রাপ্ত স্কোর</th>
                                     <th className="px-5 py-3 text-right">অ্যাকশন</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-700/60 text-slate-300">
-                                {recentAttempts.map((attempt) => (
+                                {recentAttempts.map((attempt) => {
+                                    const isWrittenQuiz = attempt.answers?.some((answer) => answer.question?.type === 'written');
+
+                                    return (
                                     <tr key={attempt.id} className="hover:bg-slate-700/30 transition">
                                         <td className="px-5 py-3.5 font-medium text-white">
                                             {attempt.quiz?.title || 'মক টেস্ট'}
@@ -153,16 +156,26 @@ export default function Index({ quizzes, recentAttempts, subjects }) {
                                             {new Date(attempt.created_at).toLocaleDateString('bn-BD')}
                                         </td>
                                         <td className="px-5 py-3.5">
-                                            <span className="text-emerald-400 font-semibold">{attempt.correct_count}</span>
-                                            <span className="text-slate-500"> / {attempt.total_questions}</span>
+                                            {isWrittenQuiz ? (
+                                                <span>{attempt.answered_count} / {attempt.total_questions} জমা</span>
+                                            ) : (
+                                                <>
+                                                    <span className="text-emerald-400 font-semibold">{attempt.correct_count}</span>
+                                                    <span className="text-slate-500"> / {attempt.total_questions}</span>
+                                                </>
+                                            )}
                                         </td>
                                         <td className="px-5 py-3.5">
-                                            <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 font-bold">
-                                                {attempt.accuracy_rate}%
-                                            </span>
+                                            {isWrittenQuiz ? (
+                                                <span className="text-amber-300">ম্যানুয়াল রিভিউ</span>
+                                            ) : (
+                                                <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 font-bold">
+                                                    {attempt.accuracy_rate}%
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="px-5 py-3.5 font-bold text-emerald-400">
-                                            {attempt.score}
+                                            {isWrittenQuiz ? 'নম্বর নেই' : attempt.score}
                                         </td>
                                         <td className="px-5 py-3.5 text-right">
                                             <Link
@@ -173,7 +186,8 @@ export default function Index({ quizzes, recentAttempts, subjects }) {
                                             </Link>
                                         </td>
                                     </tr>
-                                ))}
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>

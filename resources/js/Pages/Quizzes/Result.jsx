@@ -16,6 +16,7 @@ import {
 export default function Result({ attempt }) {
     const quiz = attempt.quiz;
     const answers = attempt.answers || [];
+    const isWrittenQuiz = answers[0]?.question?.type === 'written';
 
     const formatSeconds = (sec) => {
         const m = Math.floor(sec / 60);
@@ -64,7 +65,26 @@ export default function Result({ attempt }) {
             <Head title={`ফলাফল: ${quiz?.title}`} />
 
             {/* Score Summary Banner */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3.5 mb-8">
+            <div className={`grid grid-cols-2 ${isWrittenQuiz ? 'sm:grid-cols-3' : 'sm:grid-cols-5'} gap-3.5 mb-8`}>
+                {isWrittenQuiz ? (
+                    <>
+                        <div className="p-4 rounded-lg bg-slate-800/80 border border-slate-700 text-center">
+                            <span className="text-[11px] text-slate-400 font-medium block mb-1">জমা দেওয়া উত্তর</span>
+                            <span className="text-2xl font-extrabold text-emerald-400 block">{attempt.answered_count}</span>
+                            <span className="text-[10px] text-slate-500">মোট {attempt.total_questions}টি প্রশ্নে</span>
+                        </div>
+                        <div className="p-4 rounded-lg bg-slate-800/80 border border-slate-700 text-center col-span-2 sm:col-span-1">
+                            <span className="text-[11px] text-slate-400 font-medium block mb-1">মূল্যায়ন</span>
+                            <span className="text-sm font-bold text-amber-300 block mt-2">স্বয়ংক্রিয়ভাবে নম্বর দেওয়া হয়নি</span>
+                            <span className="text-[10px] text-slate-500">নিচে model answer দেখুন</span>
+                        </div>
+                        <div className="p-4 rounded-lg bg-slate-800/80 border border-slate-700 text-center col-span-2 sm:col-span-1">
+                            <span className="text-[11px] text-slate-400 font-medium block mb-1">সময় লেগেছে</span>
+                            <span className="text-lg font-bold text-slate-200 block mt-1">{formatSeconds(attempt.time_spent_seconds)}</span>
+                        </div>
+                    </>
+                ) : (
+                    <>
                 <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700 text-center">
                     <span className="text-[11px] text-slate-400 font-medium block mb-1">প্রাপ্ত স্কোর</span>
                     <span className="text-2xl sm:text-3xl font-extrabold text-emerald-400 block">
@@ -104,6 +124,8 @@ export default function Result({ attempt }) {
                     </span>
                     <span className="text-[10px] text-slate-500 block">টাইমার শেষ হওয়ার আগে</span>
                 </div>
+                    </>
+                )}
             </div>
 
             {/* Answer by Answer Review */}
@@ -144,7 +166,11 @@ export default function Result({ attempt }) {
                                     </div>
 
                                     <div>
-                                        {isCorrect ? (
+                                        {q.type === 'written' ? (
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-300 text-xs font-semibold border border-amber-500/20">
+                                                লিখিত উত্তর
+                                            </span>
+                                        ) : isCorrect ? (
                                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-semibold border border-emerald-500/20">
                                                 <CheckCircle2 className="w-3.5 h-3.5" /> সঠিক (+1)
                                             </span>
@@ -170,7 +196,21 @@ export default function Result({ attempt }) {
                                     </div>
                                 )}
 
-                                {/* Options View */}
+                                {q.type === 'written' ? (
+                                    <div className="space-y-3 mb-4">
+                                        <div className="p-4 rounded-lg bg-slate-900/80 border border-slate-700 text-sm text-slate-200 whitespace-pre-wrap">
+                                            <span className="font-semibold text-cyan-300 block mb-2">আপনার উত্তর:</span>
+                                            {ans.written_response || 'উত্তর দেওয়া হয়নি'}
+                                        </div>
+                                        {q.written_answer && (
+                                            <div className="p-4 rounded-lg bg-slate-900/80 border border-emerald-500/30 text-sm text-slate-200 whitespace-pre-wrap">
+                                                <span className="font-semibold text-emerald-300 block mb-2">Model answer:</span>
+                                                {q.written_answer}
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                /* Options View */
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-4">
                                     {Object.entries(q.options || {}).map(([key, val]) => {
                                         const isChosen = userSelected === key;
@@ -214,6 +254,7 @@ export default function Result({ attempt }) {
                                         );
                                     })}
                                 </div>
+                                )}
 
                                 {/* Explanation */}
                                 {q.explanation && (
