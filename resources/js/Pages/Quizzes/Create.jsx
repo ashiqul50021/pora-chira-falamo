@@ -456,7 +456,7 @@ export default function Create({
                                 className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-cyan-500"
                                 required
                             />
-                        </div>}
+                        </div>
 
                         {data.question_type === 'mcq' && <div>
                             <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1">
